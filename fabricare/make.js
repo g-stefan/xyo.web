@@ -30,7 +30,6 @@ exitIf(Shell.system("xyo-version --no-bump --project=xyo.web --version-file=vers
 
 // ---
 Shell.copyFile("tailwind.config.js", "temp/tailwind.config.js");
-Shell.copyFile("uno.config.ts", "temp/uno.config.ts");
 
 Shell.remove("output/site/library/tailwind.css");
 runInPath("temp", function() {
