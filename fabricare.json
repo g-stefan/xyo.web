@@ -1,0 +1,14 @@
+{
+	"solution": {
+		"name" : "xyo.web",
+		"type" : "generic",
+		"projects": [
+			{
+				"name" : "xyo.web",
+				"SPDX-License-Identifier": "MIT",
+				"previousVersion" : "0.1.0"
+			}
+		],
+		"releaseOutput" : true
+	}
+}
