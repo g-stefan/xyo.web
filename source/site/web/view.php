@@ -146,7 +146,7 @@ namespace XYO\Web {
             $nonce = is_null($this->nonce) ? "" : " nonce=\"" . $this->nonce . "\"";
             foreach ($this->jsLinks->list as &$group) {
                 foreach ($group as $key => $type_) {
-                    $type = (strlen($type_) == 0) ? "" : " " . $type_;
+                    $type = is_null($type_) ? "" : ((strlen($type_) == 0) ? "" : " " . $type_);
                     echo "<script src=\"" . $key . "\"" . $nonce . $type . "></script>";
                 }
             }
