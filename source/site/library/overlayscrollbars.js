@@ -77,6 +77,7 @@ XYO.Web.OverlayScrollbars.instanceUpdate = function(items) {
 XYO.Web.OverlayScrollbars.init = function() {
 	this.instance = OverlayScrollbarsGlobal.OverlayScrollbars;
 	this.instance.plugin(OverlayScrollbarsGlobal.ClickScrollPlugin);
+	this.instance.nonce(document.scripts[0].nonce);
 	XYO.Web.OverlayScrollbars.create(document.querySelectorAll(".overlay-scrollbars"));
 };
 

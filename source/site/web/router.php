@@ -212,6 +212,7 @@ namespace XYO\Web {
 		public function findLayout($path)
 		{
 			$pathSearchList = $this->buildPathSearch($path);
+			array_unshift($pathSearchList, $path . "/");
 			$pathSearchList[] = "./site/_default/";
 			return $this->findItem($pathSearchList, "layout.php");
 		}
@@ -280,7 +281,6 @@ namespace XYO\Web {
 					$this->info->sitePath = "/";
 					return true;
 				}
-				;
 				$this->info->sitePath = substr($this->info->sitePath, 0, $index + 1);
 				return true;
 			}
