@@ -130,6 +130,28 @@ namespace XYO\Web {
             $this->view->token = $_SESSION["firewall_csrf_token_post"];
         }
 
+        public function getAuthorizationHeader()
+        {
+            if (isset($_SERVER["Authorization"])) {
+                return trim($_SERVER["Authorization"]);
+            }
+            if (isset($_SERVER["HTTP_AUTHORIZATION"])) {
+                return trim($_SERVER["HTTP_AUTHORIZATION"]);
+            }
+            return null;
+        }
+
+        public function getBearerToken()
+        {
+            $header = $this->getAuthorizationHeader();
+            if (!empty($header)) {
+                if (strcmp(substr($header, 0, 7), "Bearer ") == 0) {
+                    return substr($header, 7);
+                }
+            }
+            return null;
+        }
+
         public function csrfCheck()
         {
             if (strcmp($_SERVER["REQUEST_METHOD"], "GET") == 0) {
@@ -137,6 +159,16 @@ namespace XYO\Web {
             }
             if (!(strcmp($_SERVER["REQUEST_METHOD"], "POST") == 0)) {
                 return false;
+            }
+            $bearerToken = $this->getBearerToken();
+            if (!empty($bearerToken)) {
+                $config = \XYO\Web\Config::instance();
+                $authorizationToken = $config->get("authorizationBearerToken");
+                if (!empty($authorizationToken)) {
+                    if (strcmp($authorizationToken, $bearerToken) == 0) {
+                        return true;
+                    }
+                }
             }
             if (!array_key_exists("_token", $_POST)) {
                 return false;
