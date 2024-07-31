@@ -62,12 +62,16 @@ namespace XYO\Web {
 			}
 			$page = "";
 			if (!$this->findPage($this->info->path, $page)) {
-				$slug = "";
-				if (!$this->findSlug($this->info->path, $slug)) {
-					$this->renderError("404");
+				if (!$this->findAPI($this->info->path, $page)) {
+					$slug = "";
+					if (!$this->findSlug($this->info->path, $slug)) {
+						$this->renderError("404");
+						return;
+					}
+					$this->renderSlug($slug, $this->info->path);
 					return;
 				}
-				$this->renderSlug($slug, $this->info->path);
+				$this->renderAPI($page, $this->info->path);
 				return;
 			}
 			$this->renderPage($page, $this->info->path);
@@ -101,6 +105,17 @@ namespace XYO\Web {
 			$page->init();
 			$page->initComponents();
 			$layout->render($page);
+		}
+
+		public function renderAPI($page, $path)
+		{
+			$this->info->path = $path;
+			\XYO\Web\DataSource\Connections::init();
+
+			$pageClass = require ($page);
+			$page = $pageClass::instance();
+			$page->init();
+			$page->render();
 		}
 
 		public function requestPathCheckEnding()
@@ -198,6 +213,12 @@ namespace XYO\Web {
 				$page = "./site/_default/page.php";
 			}
 			return true;
+		}
+
+		public function findAPI($path, &$pageAPI)
+		{
+			$pageAPI = $path . "/api.php";
+			return file_exists($pageAPI);
 		}
 
 		public function findSlug($path, &$slug)
