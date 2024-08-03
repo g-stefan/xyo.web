@@ -221,10 +221,9 @@ namespace XYO\Web {
 			if (strlen($path) == 0) {
 				$path = ".";
 			}
-			;
 			$page = $path . "/page.php";
 			if (!file_exists($page)) {
-				if (strlen($path) != 0) {
+				if (strcmp($path, ".") != 0) {
 					return false;
 				}
 				$page = "./site/_default/page.php";
@@ -237,7 +236,6 @@ namespace XYO\Web {
 			if (strlen($path) == 0) {
 				$path = ".";
 			}
-			;
 			$pageAPI = $path . "/api.php";
 			return file_exists($pageAPI);
 		}
