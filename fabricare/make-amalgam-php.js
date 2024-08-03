@@ -36,6 +36,7 @@ phpSourceFiles = [
 	"grouped-list.php",
 	"view.php",
 	"request.php",
+	"authorization.php",
 	"firewall.php",
 	"client.php",
 	"log.php",

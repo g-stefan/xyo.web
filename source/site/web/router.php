@@ -60,14 +60,14 @@ namespace XYO\Web {
 			}
 
 			if ($this->findPage($this->info->path, $this->info->routeFile)) {
-				$this->info->routeType=$this->info->routeTypePage;
+				$this->info->routeType = $this->info->routeTypePage;
 			} else
-			if ($this->findAPI($this->info->path, $this->info->routeFile)) {
-				$this->info->routeType=$this->info->routeTypeAPI;
-			} else 
-			if (!$this->findSlug($this->info->path, $this->info->routeFile)) {
-				$this->info->routeType=$this->info->routeTypeSlug;
-			}
+				if ($this->findAPI($this->info->path, $this->info->routeFile)) {
+					$this->info->routeType = $this->info->routeTypeAPI;
+				} else
+					if ($this->findSlug($this->info->path, $this->info->routeFile)) {
+						$this->info->routeType = $this->info->routeTypeSlug;
+					}
 
 			\XYO\Web\DataSource\Connections::init();
 
@@ -76,26 +76,26 @@ namespace XYO\Web {
 				return;
 			}
 
-			if($this->info->routeType==$this->info->routeTypePage){
+			if ($this->info->routeType == $this->info->routeTypePage) {
 				$this->renderPage($this->info->routeFile, $this->info->path);
 				return;
 			}
-			if($this->info->routeType==$this->info->routeTypeAPI){
+			if ($this->info->routeType == $this->info->routeTypeAPI) {
 				$this->renderAPI($this->info->routeFile, $this->info->path);
 				return;
 			}
-			if($this->info->routeType==$this->info->routeTypeSlug){
+			if ($this->info->routeType == $this->info->routeTypeSlug) {
 				$this->renderSlug($this->info->routeFile, $this->info->path);
 				return;
 			}
 
-			$this->renderError("404");			
+			$this->renderError("404");
 		}
 
 		public function renderPage($page, $path)
 		{
 			$this->info->path = $path;
-			
+
 			if ($this->request->isAJAX() || $this->request->isJSON()) {
 				$component = $this->request->get("_component", "");
 				if (strlen($component) > 0) {
@@ -123,7 +123,7 @@ namespace XYO\Web {
 
 		public function renderAPI($page, $path)
 		{
-			$this->info->path = $path;			
+			$this->info->path = $path;
 
 			$pageClass = require ($page);
 			$page = $pageClass::instance();
@@ -218,9 +218,10 @@ namespace XYO\Web {
 
 		public function findPage($path, &$page)
 		{
-			if(strlen($path)==0){
-				$path=".";
-			};
+			if (strlen($path) == 0) {
+				$path = ".";
+			}
+			;
 			$page = $path . "/page.php";
 			if (!file_exists($page)) {
 				if (strlen($path) != 0) {
@@ -233,9 +234,10 @@ namespace XYO\Web {
 
 		public function findAPI($path, &$pageAPI)
 		{
-			if(strlen($path)==0){
-				$path=".";
-			};
+			if (strlen($path) == 0) {
+				$path = ".";
+			}
+			;
 			$pageAPI = $path . "/api.php";
 			return file_exists($pageAPI);
 		}
