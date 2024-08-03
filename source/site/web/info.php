@@ -15,6 +15,13 @@ namespace XYO\Web {
         public $path;
         public $location;
 
+        public $routeTypeUnknown;
+        public $routeTypePage;
+        public $routeTypeAPI;
+        public $routeTypeSlug;
+        public $routeType;
+        public $routeFile;
+
         public $sitePath;
 
         public $version;
@@ -25,6 +32,13 @@ namespace XYO\Web {
             $this->location = null;
             $this->sitePath = null;
             $this->version = "${VERSION_VERSION}";
+
+            $this->routeTypeUnknown = 0;
+            $this->routeTypePage = 1;
+            $this->routeTypeAPI = 2;
+            $this->routeTypeSlug = 3;
+            $this->routeType = $this->routeTypeUnknown;
+            $this->routeFile = null;
         }
 
         public static function instance()

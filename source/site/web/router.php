@@ -29,6 +29,8 @@ namespace XYO\Web {
 			$this->info->path = "./";
 			$this->info->location = "";
 			$this->info->sitePath = "";
+			$this->info->routeType = $this->info->routeTypeUnknown;
+			$this->info->routeFile = "";
 		}
 
 		public static function instance()
@@ -56,32 +58,44 @@ namespace XYO\Web {
 				$this->renderError("400");
 				return;
 			}
+
+			if ($this->findPage($this->info->path, $this->info->routeFile)) {
+				$this->info->routeType=$this->info->routeTypePage;
+			} else
+			if ($this->findAPI($this->info->path, $this->info->routeFile)) {
+				$this->info->routeType=$this->info->routeTypeAPI;
+			} else 
+			if (!$this->findSlug($this->info->path, $this->info->routeFile)) {
+				$this->info->routeType=$this->info->routeTypeSlug;
+			}
+
+			\XYO\Web\DataSource\Connections::init();
+
 			if (!$this->firewall->run()) {
 				$this->renderError("401");
 				return;
 			}
-			$page = "";
-			if (!$this->findPage($this->info->path, $page)) {
-				if (!$this->findAPI($this->info->path, $page)) {
-					$slug = "";
-					if (!$this->findSlug($this->info->path, $slug)) {
-						$this->renderError("404");
-						return;
-					}
-					$this->renderSlug($slug, $this->info->path);
-					return;
-				}
-				$this->renderAPI($page, $this->info->path);
+
+			if($this->info->routeType==$this->info->routeTypePage){
+				$this->renderPage($this->info->routeFile, $this->info->path);
 				return;
 			}
-			$this->renderPage($page, $this->info->path);
+			if($this->info->routeType==$this->info->routeTypeAPI){
+				$this->renderAPI($this->info->routeFile, $this->info->path);
+				return;
+			}
+			if($this->info->routeType==$this->info->routeTypeSlug){
+				$this->renderSlug($this->info->routeFile, $this->info->path);
+				return;
+			}
+
+			$this->renderError("404");			
 		}
 
 		public function renderPage($page, $path)
 		{
 			$this->info->path = $path;
-			\XYO\Web\DataSource\Connections::init();
-
+			
 			if ($this->request->isAJAX() || $this->request->isJSON()) {
 				$component = $this->request->get("_component", "");
 				if (strlen($component) > 0) {
@@ -109,8 +123,7 @@ namespace XYO\Web {
 
 		public function renderAPI($page, $path)
 		{
-			$this->info->path = $path;
-			\XYO\Web\DataSource\Connections::init();
+			$this->info->path = $path;			
 
 			$pageClass = require ($page);
 			$page = $pageClass::instance();
@@ -205,6 +218,9 @@ namespace XYO\Web {
 
 		public function findPage($path, &$page)
 		{
+			if(strlen($path)==0){
+				$path=".";
+			};
 			$page = $path . "/page.php";
 			if (!file_exists($page)) {
 				if (strlen($path) != 0) {
@@ -217,6 +233,9 @@ namespace XYO\Web {
 
 		public function findAPI($path, &$pageAPI)
 		{
+			if(strlen($path)==0){
+				$path=".";
+			};
 			$pageAPI = $path . "/api.php";
 			return file_exists($pageAPI);
 		}

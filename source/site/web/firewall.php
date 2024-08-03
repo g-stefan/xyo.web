@@ -11,6 +11,7 @@ namespace XYO\Web {
     require_once ("./site/web/info.php");
     require_once ("./site/web/view.php");
     require_once ("./site/web/request.php");
+    require_once ("./site/web/authorization.php");
 
     class Firewall
     {
@@ -160,16 +161,25 @@ namespace XYO\Web {
             if (!(strcmp($_SERVER["REQUEST_METHOD"], "POST") == 0)) {
                 return false;
             }
-            $bearerToken = $this->getBearerToken();
-            if (!empty($bearerToken)) {
-                $config = \XYO\Web\Config::instance();
-                $authorizationToken = $config->get("authorizationBearerToken");
-                if (!empty($authorizationToken)) {
-                    if (strcmp($authorizationToken, $bearerToken) == 0) {
-                        return true;
-                    }
+
+            $authorization = Authorization::instance();
+            if ($this->info->routeType != $this->info->routeTypeUnknown) {
+                $authorizationFile = dirname($this->info->routeFile) . "/authorization.php";
+                if (file_exists($authorizationFile)) {
+                    $authorizationClass = require ($authorizationFile);
+                    $authorization = $authorizationClass::instance();
                 }
             }
+            if ($authorization->allowPOST) {
+                return true;
+            }
+            $bearerToken = $this->getBearerToken();
+            if (!empty($bearerToken)) {
+                if ($authorization->checkBearerToken($bearerToken)) {
+                    return true;
+                }
+            }
+
             if (!array_key_exists("_token", $_POST)) {
                 return false;
             }
