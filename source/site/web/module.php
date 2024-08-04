@@ -82,6 +82,7 @@ namespace XYO\Web {
 
         public function process()
         {
+            $this->render();
         }
 
         public function initComponents()

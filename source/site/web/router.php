@@ -127,7 +127,8 @@ namespace XYO\Web {
 
 			$apiClass = require ($apiFile);
 			$api = $apiClass::instance();
-			$api->process();			
+			$api->init();
+			$api->process();
 		}
 
 		public function requestPathCheckEnding()
