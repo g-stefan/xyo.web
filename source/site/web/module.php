@@ -80,6 +80,10 @@ namespace XYO\Web {
         {
         }
 
+        public function process()
+        {
+        }
+
         public function initComponents()
         {
             foreach ($this->components as &$component) {
@@ -125,6 +129,12 @@ namespace XYO\Web {
         public function isJSON()
         {
             return $this->request->isComponentJSON($this->id);
+        }
+
+        public function isAPI()
+        {
+            $info = \XYO\Web\Info::instance();
+            return ($info->routeType == $info->routeTypeAPI);
         }
 
         protected function processAJAXPayload($payload = null, $payloadJs = null)

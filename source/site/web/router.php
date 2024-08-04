@@ -121,14 +121,13 @@ namespace XYO\Web {
 			$layout->render($page);
 		}
 
-		public function renderAPI($page, $path)
+		public function renderAPI($apiFile, $path)
 		{
 			$this->info->path = $path;
 
-			$pageClass = require ($page);
-			$page = $pageClass::instance();
-			$page->init();
-			$page->render();
+			$apiClass = require ($apiFile);
+			$api = $apiClass::instance();
+			$api->process();			
 		}
 
 		public function requestPathCheckEnding()
@@ -231,13 +230,13 @@ namespace XYO\Web {
 			return true;
 		}
 
-		public function findAPI($path, &$pageAPI)
+		public function findAPI($path, &$api)
 		{
 			if (strlen($path) == 0) {
 				$path = ".";
 			}
-			$pageAPI = $path . "/api.php";
-			return file_exists($pageAPI);
+			$api = $path . "/api.php";
+			return file_exists($api);
 		}
 
 		public function findSlug($path, &$slug)
