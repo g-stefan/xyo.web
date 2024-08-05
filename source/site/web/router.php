@@ -70,17 +70,17 @@ namespace XYO\Web {
 					if ($this->findSlug($this->info->path, $this->info->routeFile)) {
 						$this->info->routeType = $this->info->routeTypeSlug;
 					}
-	
+
 			\XYO\Web\DataSource\Connections::init();
 
 			$this->info->routeAuthorization = Authorization::instance();
 			if ($this->info->routeType != $this->info->routeTypeUnknown) {
-                $authorizationFile = dirname($this->info->routeFile) . "/authorization.php";
-                if (file_exists($authorizationFile)) {
-                    $authorizationClass = require ($authorizationFile);
-                    $this->info->routeAuthorization = $authorizationClass::instance();
-                }
-            }
+				$authorizationFile = $this->findAuthorization($this->info->path);
+				if (!empty($authorizationFile)) {
+					$authorizationClass = require ($authorizationFile);
+					$this->info->routeAuthorization = $authorizationClass::instance();
+				}
+			}
 
 			if (!$this->firewall->run()) {
 				$this->renderError("401");
@@ -266,6 +266,13 @@ namespace XYO\Web {
 			array_unshift($pathSearchList, $path . "/");
 			$pathSearchList[] = "./site/_default/";
 			return $this->findItem($pathSearchList, "layout.php");
+		}
+
+		public function findAuthorization($path)
+		{
+			$pathSearchList = $this->buildPathSearch($path);
+			array_unshift($pathSearchList, $path . "/");
+			return $this->findItem($pathSearchList, "authorization.php");
 		}
 
 		public function renderRedirect($location)
