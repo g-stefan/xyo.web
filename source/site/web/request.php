@@ -64,11 +64,15 @@ namespace XYO\Web {
             return array_key_exists($name, $this->request);
         }
 
-        public function isGet(){
+        public function isOPTIONS(){
+            return (strcmp($_SERVER["REQUEST_METHOD"], "OPTIONS") == 0);
+        }
+
+        public function isGET(){
             return (strcmp($_SERVER["REQUEST_METHOD"], "GET") == 0);
         }
 
-        public function isPost(){
+        public function isPOST(){
             return (strcmp($_SERVER["REQUEST_METHOD"], "POST") == 0);
         }        
 

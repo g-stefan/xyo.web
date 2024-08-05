@@ -21,6 +21,7 @@ namespace XYO\Web {
         public $routeTypeSlug;
         public $routeType;
         public $routeFile;
+        public $routeAuthorization;
 
         public $sitePath;
 
@@ -39,6 +40,7 @@ namespace XYO\Web {
             $this->routeTypeSlug = 3;
             $this->routeType = $this->routeTypeUnknown;
             $this->routeFile = null;
+            $this->routeAuthorization = null;
         }
 
         public static function instance()

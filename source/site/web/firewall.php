@@ -10,22 +10,19 @@ namespace XYO\Web {
 
     require_once ("./site/web/info.php");
     require_once ("./site/web/view.php");
-    require_once ("./site/web/request.php");
     require_once ("./site/web/authorization.php");
 
     class Firewall
     {
         private static $instance = null;
         protected $info;
-        protected $view;
-        protected $request;
+        protected $view;        
         protected $clientIP;
 
         protected function __construct()
         {
             $this->info = \XYO\Web\Info::instance();
-            $this->view = \XYO\Web\View::instance();
-            $this->request = \XYO\Web\Request::instance();
+            $this->view = \XYO\Web\View::instance();    
             $this->clientIP = null;
         }
 
@@ -52,8 +49,19 @@ namespace XYO\Web {
 
         public function run()
         {
-            $this->csrfLoad();
-            return $this->csrfCheck();
+            if(!$this->requestCheckMethod()) {
+                return false;
+            }
+            if(!$this->info->routeAuthorization->checkBearerToken($this->getBearerToken())) {
+                return false;
+            }
+            if($this->info->routeAuthorization->checkCSRF()){
+                $this->csrfLoad();
+                if(!$this->csrfCheck()){
+                    return false;
+                }
+            }
+            return true;            
         }
 
         public function getClientIP()
@@ -153,33 +161,21 @@ namespace XYO\Web {
             return null;
         }
 
+        public function requestCheckMethod() {
+            if (strcmp($_SERVER["REQUEST_METHOD"], "OPTIONS") == 0) {
+                return $this->info->routeAuthorization->checkOPTIONS();
+            }
+            if (strcmp($_SERVER["REQUEST_METHOD"], "GET") == 0) {
+                return $this->info->routeAuthorization->checkGET();
+            }                       
+            if (!(strcmp($_SERVER["REQUEST_METHOD"], "POST") == 0)) {
+                return $this->info->routeAuthorization->checkPOST();
+            }
+            return false;
+        }
+
         public function csrfCheck()
         {
-            if (strcmp($_SERVER["REQUEST_METHOD"], "GET") == 0) {
-                return true;
-            }
-            if (!(strcmp($_SERVER["REQUEST_METHOD"], "POST") == 0)) {
-                return false;
-            }
-
-            $authorization = Authorization::instance();
-            if ($this->info->routeType != $this->info->routeTypeUnknown) {
-                $authorizationFile = dirname($this->info->routeFile) . "/authorization.php";
-                if (file_exists($authorizationFile)) {
-                    $authorizationClass = require ($authorizationFile);
-                    $authorization = $authorizationClass::instance();
-                }
-            }
-            if ($authorization->allowPOST) {
-                return true;
-            }
-            $bearerToken = $this->getBearerToken();
-            if (!empty($bearerToken)) {
-                if ($authorization->checkBearerToken($bearerToken)) {
-                    return true;
-                }
-            }
-
             if (!array_key_exists("_token", $_POST)) {
                 return false;
             }
@@ -206,7 +202,6 @@ namespace XYO\Web {
             }
             return true;
         }
-
 
     }
 }

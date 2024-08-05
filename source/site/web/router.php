@@ -10,6 +10,7 @@ namespace XYO\Web {
 
 	require_once ("./site/web/info.php");
 	require_once ("./site/web/view.php");
+	require_once ("./site/web/authorization.php");
 	require_once ("./site/web/firewall.php");
 	require_once ("./site/web/client.php");
 	require_once ("./site/web/datasource/connections.php");
@@ -31,6 +32,7 @@ namespace XYO\Web {
 			$this->info->sitePath = "";
 			$this->info->routeType = $this->info->routeTypeUnknown;
 			$this->info->routeFile = "";
+			$this->info->routeAuthorization = null;
 		}
 
 		public static function instance()
@@ -68,8 +70,17 @@ namespace XYO\Web {
 					if ($this->findSlug($this->info->path, $this->info->routeFile)) {
 						$this->info->routeType = $this->info->routeTypeSlug;
 					}
-
+	
 			\XYO\Web\DataSource\Connections::init();
+
+			$this->info->routeAuthorization = Authorization::instance();
+			if ($this->info->routeType != $this->info->routeTypeUnknown) {
+                $authorizationFile = dirname($this->info->routeFile) . "/authorization.php";
+                if (file_exists($authorizationFile)) {
+                    $authorizationClass = require ($authorizationFile);
+                    $this->info->routeAuthorization = $authorizationClass::instance();
+                }
+            }
 
 			if (!$this->firewall->run()) {
 				$this->renderError("401");

@@ -112,14 +112,19 @@ namespace XYO\Web {
             $this->components[$id]->initComponent(implode(".", $idList));
         }
 
-        public function isGet()
+        public function isOPTIONS()
         {
-            return $this->request->isGet();
+            return $this->request->isOPTIONS();
         }
 
-        public function isPost()
+        public function isGET()
         {
-            return $this->request->isPost();
+            return $this->request->isGET();
+        }
+
+        public function isPOST()
+        {
+            return $this->request->isPOST();
         }
 
         public function isAJAX()

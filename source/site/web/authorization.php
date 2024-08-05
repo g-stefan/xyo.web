@@ -11,16 +11,24 @@ namespace XYO\Web {
     class Authorization
     {
 
-        public $allowPOST;
-
-        public function __construct()
-        {
-            $this->allowPOST = false;
-        }
-
         public static function instance()
         {
             return new static();
+        }
+
+        public function checkOPTIONS()
+        {
+            return true;
+        }
+
+        public function checkGET()
+        {
+            return true;
+        }
+
+        public function checkPOST()
+        {
+            return true;
         }
 
         public function checkBearerToken($bearerToken)
@@ -28,11 +36,20 @@ namespace XYO\Web {
             $config = \XYO\Web\Config::instance();
             $authorizationToken = $config->get("authorizationBearerToken");
             if (!empty($authorizationToken)) {
-                if (strcmp($authorizationToken, $bearerToken) == 0) {
-                    return true;
-                }
+                return strcmp($authorizationToken, $bearerToken) == 0;
             }
-            return false;
+            return true;
+        }
+
+        public function checkCSRF()
+        {
+            if (strcmp($_SERVER["REQUEST_METHOD"], "OPTIONS") == 0) {
+                return false;
+            }
+            if (strcmp($_SERVER["REQUEST_METHOD"], "GET") == 0) {
+                return false;
+            }
+            return true;
         }
 
     }
