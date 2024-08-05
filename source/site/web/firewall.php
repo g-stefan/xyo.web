@@ -141,6 +141,9 @@ namespace XYO\Web {
 
         public function getAuthorizationHeader()
         {
+            if (isset($_SERVER["REDIRECT_HTTP_AUTHORIZATION"])) {
+                return trim($_SERVER["REDIRECT_HTTP_AUTHORIZATION"]);
+            }
             if (isset($_SERVER["HTTP_AUTHORIZATION"])) {
                 return trim($_SERVER["HTTP_AUTHORIZATION"]);
             }
