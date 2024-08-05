@@ -141,9 +141,6 @@ namespace XYO\Web {
 
         public function getAuthorizationHeader()
         {
-            if (isset($_SERVER["Authorization"])) {
-                return trim($_SERVER["Authorization"]);
-            }
             if (isset($_SERVER["HTTP_AUTHORIZATION"])) {
                 return trim($_SERVER["HTTP_AUTHORIZATION"]);
             }

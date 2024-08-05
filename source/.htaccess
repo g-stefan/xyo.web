@@ -7,6 +7,8 @@ AddDefaultCharset utf-8
 # Prevent mod_dir from appending the trailing slash to directories (with a 301 redirect)
 DirectorySlash Off
 DirectoryIndex index.html index.php
+# Authorization
+SetEnvIf Authorization .+ HTTP_AUTHORIZATION=$0
 #
 RewriteEngine on
 # Allow mod_rewrite to function when there is no trailing slash
