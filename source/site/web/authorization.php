@@ -31,6 +31,11 @@ namespace XYO\Web {
             return true;
         }
 
+        public function setHeaders()
+        {
+
+        }
+
         public function checkBearerToken($bearerToken)
         {
             $config = \XYO\Web\Config::instance();
@@ -43,13 +48,11 @@ namespace XYO\Web {
 
         public function checkCSRF()
         {
-            if (strcmp($_SERVER["REQUEST_METHOD"], "OPTIONS") == 0) {
-                return false;
+            if (strcmp($_SERVER["REQUEST_METHOD"], "POST") == 0) {
+                return true;
             }
-            if (strcmp($_SERVER["REQUEST_METHOD"], "GET") == 0) {
-                return false;
-            }
-            return true;
+
+            return false;
         }
 
     }

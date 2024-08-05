@@ -16,13 +16,13 @@ namespace XYO\Web {
     {
         private static $instance = null;
         protected $info;
-        protected $view;        
+        protected $view;
         protected $clientIP;
 
         protected function __construct()
         {
             $this->info = \XYO\Web\Info::instance();
-            $this->view = \XYO\Web\View::instance();    
+            $this->view = \XYO\Web\View::instance();
             $this->clientIP = null;
         }
 
@@ -49,19 +49,28 @@ namespace XYO\Web {
 
         public function run()
         {
-            if(!$this->requestCheckMethod()) {
+            if (!$this->requestCheckMethod()) {
                 return false;
             }
-            if(!$this->info->routeAuthorization->checkBearerToken($this->getBearerToken())) {
+
+            $this->info->routeAuthorization->setHeaders();
+            
+            if (strcmp($_SERVER["REQUEST_METHOD"], "OPTIONS") == 0) {
+                return true;
+            }
+
+            if (!$this->info->routeAuthorization->checkBearerToken($this->getBearerToken())) {
                 return false;
             }
-            if($this->info->routeAuthorization->checkCSRF()){
-                $this->csrfLoad();
-                if(!$this->csrfCheck()){
+
+            $this->csrfLoad();
+            if ($this->info->routeAuthorization->checkCSRF()) {
+                if (!$this->csrfCheck()) {
                     return false;
                 }
             }
-            return true;            
+
+            return true;
         }
 
         public function getClientIP()
@@ -161,13 +170,14 @@ namespace XYO\Web {
             return null;
         }
 
-        public function requestCheckMethod() {
+        public function requestCheckMethod()
+        {
             if (strcmp($_SERVER["REQUEST_METHOD"], "OPTIONS") == 0) {
                 return $this->info->routeAuthorization->checkOPTIONS();
             }
             if (strcmp($_SERVER["REQUEST_METHOD"], "GET") == 0) {
                 return $this->info->routeAuthorization->checkGET();
-            }                       
+            }
             if (strcmp($_SERVER["REQUEST_METHOD"], "POST") == 0) {
                 return $this->info->routeAuthorization->checkPOST();
             }

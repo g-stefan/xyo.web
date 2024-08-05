@@ -87,6 +87,10 @@ namespace XYO\Web {
 				return;
 			}
 
+			if ($this->request->isOPTIONS()) {
+				return;
+			}
+
 			if ($this->info->routeType == $this->info->routeTypePage) {
 				$this->renderPage($this->info->routeFile, $this->info->path);
 				return;
