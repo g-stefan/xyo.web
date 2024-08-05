@@ -165,7 +165,7 @@ namespace XYO\Web {
             if (strcmp($_SERVER["REQUEST_METHOD"], "GET") == 0) {
                 return $this->info->routeAuthorization->checkGET();
             }                       
-            if (!(strcmp($_SERVER["REQUEST_METHOD"], "POST") == 0)) {
+            if (strcmp($_SERVER["REQUEST_METHOD"], "POST") == 0) {
                 return $this->info->routeAuthorization->checkPOST();
             }
             return false;
