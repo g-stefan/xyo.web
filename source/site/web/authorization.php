@@ -18,7 +18,7 @@ namespace XYO\Web {
 
         public function checkOPTIONS()
         {
-            return true;
+            return false;
         }
 
         public function checkGET()
