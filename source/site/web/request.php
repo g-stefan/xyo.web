@@ -84,6 +84,12 @@ namespace XYO\Web {
             return (strcmp($this->get("_json", "0"),"1")==0);
         }
 
+        public function isAPI()
+        {
+            $info = \XYO\Web\Info::instance();
+            return ($info->routeType == $info->routeTypeAPI);
+        }
+
         public function isComponent($id) {
             $component=$this->get("_component","");
             return (strcmp($component,$id)==0);

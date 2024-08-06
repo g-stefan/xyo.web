@@ -38,10 +38,17 @@ namespace XYO\Web {
 
         public function checkBearerToken($bearerToken)
         {
-            $config = \XYO\Web\Config::instance();
-            $authorizationToken = $config->get("authorizationBearerToken");
-            if (!empty($authorizationToken)) {
-                return strcmp($authorizationToken, $bearerToken) == 0;
+            $request = \XYO\Web\Request::instance();
+            if ($request->isAPI()) {
+                $config = \XYO\Web\Config::instance();
+                if (property_exists($config, "api")) {
+                    if (property_exists($config->api, "authorizationBearerToken")) {
+                        $authorizationToken = $config->api->authorizationBearerToken;
+                        if (!empty($authorizationToken)) {
+                            return strcmp($authorizationToken, $bearerToken) == 0;
+                        }
+                    }
+                }
             }
             return true;
         }
