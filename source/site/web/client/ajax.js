@@ -42,7 +42,7 @@ XYO.Web.AJAX.get = function (url, fn, fnError, fnRequest, fnUpload, fnDownload) 
 		fnRequest(request);
 	};
 	if (fnUpload) {
-		request.upload.addEventListener('progress', function (event) {
+		request.upload.addEventListener("progress", function (event) {
 			fnUpload(event.loaded, event.total, event.lengthComputable);
 		}, false);
 	};
@@ -92,7 +92,7 @@ XYO.Web.AJAX.post = function (url, payload, fn, fnError, fnRequest, fnUpload, fn
 		request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
 	};
 	if (fnUpload) {
-		request.upload.addEventListener('progress', function (event) {
+		request.upload.addEventListener("progress", function (event) {
 			fnUpload(event.loaded, event.total, event.lengthComputable);
 		}, false);
 	};

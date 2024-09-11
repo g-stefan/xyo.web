@@ -172,6 +172,11 @@ namespace XYO\Web {
             echo "XYO.Web.Component.AJAX.get(\"" . $this->id . "\", " . $payloadArray . ");";
         }
 
+        public function renderComponentFormInput()
+        {
+            echo "<input type=\"hidden\" name=\"_component\" value=\"" . $this->id . "\"></input>";
+        }
+
         protected function sessionSet($name, $value)
         {
             $key = "component_" . $this->id;
@@ -180,6 +185,7 @@ namespace XYO\Web {
             }
             $_SESSION[$key][$name] = $value;
         }
+
         protected function sessionGet($name, $defaultValue = null)
         {
             $key = "component_" . $this->id;
