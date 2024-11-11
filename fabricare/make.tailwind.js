@@ -17,9 +17,9 @@ runInPath("temp", function() {
 
 Shell.copyFile("tailwind.config.js", "temp/tailwind.config.js");
 
-Shell.remove("output/site/library/tailwind.css");
+Shell.remove("output/_site/library/tailwind.css");
 runInPath("temp", function() {
-	Shell.system("npx tailwindcss -i ./../source/site/library/tailwind.css -o ./../output/site/library/tailwind.css --minify");
+	Shell.system("npx tailwindcss -i ./../source/_site/library/tailwind.css -o ./../output/_site/library/tailwind.css --minify");
 });
 
 // ---

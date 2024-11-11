@@ -1,0 +1,24 @@
+@charset "UTF-8";
+
+/*
+// XYO.Web
+// Copyright (c) 2024 Grigore Stefan <g_stefan@yahoo.com>
+// MIT License (MIT) <http://opensource.org/licenses/MIT>
+// SPDX-FileCopyrightText: 2024 Grigore Stefan <g_stefan@yahoo.com>
+// SPDX-License-Identifier: MIT
+*/
+
+.xyo-web-logo {
+    position: relative;
+    display: block;
+    box-sizing: border-box;
+    white-space: nowrap;
+    margin: 0px;
+    padding: 0px;
+    border: 0px;
+    overflow: hidden;
+    background: no-repeat url("xyo-web-logo.01.png");
+    width: 204px;
+    height: 54px;
+}
+

@@ -7,7 +7,7 @@ messageAction("make amalgam-php [" + Project.name + "]");
 
 function processAmalgam(path, phpSourceFiles, file) {
 
-	phpSource = Shell.fileGetContents("./output/site/web/release/web.header.php");
+	phpSource = Shell.fileGetContents("./output/_site/web/release/web.header.php");
 	for (i = 0; i < phpSourceFiles.length; ++i) {
 
 		Shell.system("php \"fabricare/make-amalgam-php.php\" \"./output/" + path + "/" + phpSourceFiles[i] + "\" \"temp/temp.php\"");
@@ -55,7 +55,7 @@ phpSourceFiles = [
 	"main.php"
 ];
 
-processAmalgam("site/web", phpSourceFiles, "./output/site/web.php");
+processAmalgam("_site/web", phpSourceFiles, "./output/_site/web.php");
 
 // ---
 
@@ -65,9 +65,9 @@ phpSourceFiles = [
 	"mysql-connection.php"
 ];
 
-processAmalgam("site/web.ds", phpSourceFiles, "./output/site/web.ds/mysql-connection.php");
-Shell.remove("./output/site/web.ds/mysql-table.php");
-Shell.remove("./output/site/web.ds/mysql-query.php");
+processAmalgam("_site/web.ds", phpSourceFiles, "./output/_site/web.ds/mysql-connection.php");
+Shell.remove("./output/_site/web.ds/mysql-table.php");
+Shell.remove("./output/_site/web.ds/mysql-query.php");
 
 // ---
 
@@ -77,10 +77,10 @@ phpSourceFiles = [
 	"sqlite-connection.php"
 ];
 
-processAmalgam("site/web.ds", phpSourceFiles, "./output/site/web.ds/sqlite-connection.php");
-Shell.remove("./output/site/web.ds/sqlite-table.php");
-Shell.remove("./output/site/web.ds/sqlite-query.php");
+processAmalgam("_site/web.ds", phpSourceFiles, "./output/_site/web.ds/sqlite-connection.php");
+Shell.remove("./output/_site/web.ds/sqlite-table.php");
+Shell.remove("./output/_site/web.ds/sqlite-query.php");
 
 // ---
 
-Shell.removeDirRecursivelyForce("output/site/web");
+Shell.removeDirRecursivelyForce("output/_site/web");
