@@ -15,11 +15,10 @@ runInPath("temp", function() {
 
 // ---
 
-Shell.copyFile("tailwind.config.js", "temp/tailwind.config.js");
-
 Shell.remove("output/_site/library/tailwind.css");
+Shell.copy("source/_site/library/tailwind.css", "temp/tailwind.css");
 runInPath("temp", function() {
-	Shell.system("npx tailwindcss -i ./../source/_site/library/tailwind.css -o ./../output/_site/library/tailwind.css --minify");
+	Shell.system("npx @tailwindcss/cli  -i ./tailwind.css -o ./../output/_site/library/tailwind.css --minify");
 });
 
 // ---

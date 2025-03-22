@@ -1,6 +1,6 @@
 // Created by Grigore Stefan <g_stefan@yahoo.com>
 // Public domain (Unlicense) <http://unlicense.org>
-// SPDX-FileCopyrightText: 2024 Grigore Stefan <g_stefan@yahoo.com>
+// SPDX-FileCopyrightText: 2025 Grigore Stefan <g_stefan@yahoo.com>
 // SPDX-License-Identifier: Unlicense
 
 messageAction("vendor");
@@ -17,8 +17,7 @@ if (Shell.fileExists("archive/vendor.7z")) {
 Shell.mkdirRecursivelyIfNotExists("archive/vendor");
 
 runInPath("archive/vendor", function() {
-	Shell.system("npm install tailwindcss");
-	Shell.system("npx tailwindcss init");
+	Shell.system("npm i tailwindcss @tailwindcss/postcss @tailwindcss/cli purgecss");
 	exitIf(Shell.system("7z a -mx9 -mmt4 -r- -sse -w. -y -t7z ../vendor.7z *"));
 });
 

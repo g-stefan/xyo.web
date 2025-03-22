@@ -48,23 +48,7 @@ Files: temp/*
 Copyright: 2024 Grigore Stefan <g_stefan@yahoo.com>
 License: MIT
 
-Files: source/site/library/lucide-icons.*
-Copyright: Copyright (c) 2022 Lucide Contributors
-License: ISC
-
-Files: source/site/library/normalize.*
-Copyright: Copyright (c) Nicolas Gallagher and Jonathan Neal
-License: MIT
-
-Files: source/site/library/overlayscrollbars.*
-Copyright: Copyright KingSora | Rene Haas.
-License: MIT
-
-Files: source/site/library/roboto-regular.*
-Copyright: Copyright (c) Christian Robertson
-License: Apache-2.0
-
-Files: source/site/library/tailwind.*
+Files: source/_site/library/tailwind.*
 Copyright (c) Tailwind Labs, Inc.
 License: MIT
 
