@@ -11,13 +11,13 @@ namespace XYO\Library {
 
     require_once ("./_site/web.php");
 
-    class Tailwind extends \XYO\Web\Component
+    class XYOWebCSS extends \XYO\Web\Component
     {
 
-        protected static $name = "tailwind";
+        protected static $name = "xyo-web-css";
 
         public function init(){
-            $this->view->cssLinks->set(self::$name, $this->site."_site/library/tailwind.css");
+            $this->view->cssLinks->set(self::$name, $this->site."_site/library/xyo-web.css");
         }        
 
     }

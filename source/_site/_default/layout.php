@@ -9,14 +9,14 @@ namespace XYO\Web\_Default {
     defined("XYO_WEB") or die("Forbidden");
 
     require_once ("./_site/web.php");    
-    require_once ("./_site/library/tailwind.php");
-    use \XYO\Library\Tailwind;
+    require_once ("./_site/library/xyo-web-css.php");
+    use \XYO\Library\XYOWebCSS;
     
     class Layout extends \XYO\Web\Layout
     {
         public function init()
         {            
-            Tailwind::register($this);         
+            XYOWebCSS::register($this);         
         }
 
         public function render(&$page = null)

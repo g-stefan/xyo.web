@@ -15,10 +15,10 @@ runInPath("temp", function() {
 
 // ---
 
-Shell.remove("output/_site/library/tailwind.css");
-Shell.copy("source/_site/library/tailwind.css", "temp/tailwind.css");
+Shell.remove("output/_site/library/xyo-web.css");
+Shell.copy("source/_site/library/xyo-web.css", "temp/xyo-web.css");
 runInPath("temp", function() {
-	Shell.system("npx @tailwindcss/cli  -i ./tailwind.css -o ./../output/_site/library/tailwind.css --minify");
+	Shell.system("npx @tailwindcss/cli  -i ./xyo-web.css -o ./../output/_site/library/xyo-web.css --minify");
 });
 
 // ---
