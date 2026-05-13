@@ -5,7 +5,7 @@
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
 // SPDX-License-Identifier: MIT
 
-namespace XYO\Web\DataSource\Types\MySQL {
+namespace XYO\Web\DataSource\Type\PostgreSQL {
 
     defined("XYO_WEB") or die("Forbidden");
 
@@ -155,7 +155,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
 
         function strQueryWhereClauseForFieldValue($fieldAs, $fieldThis, $value)
         {
-            return "`" . $fieldAs . "`=" . $this->strQueryValue($fieldThis, $value);
+            return "\"" . $fieldAs . "\"=" . $this->strQueryValue($fieldThis, $value);
         }
 
         function strQueryWhereClauseForField($fieldAs, $fieldThis)
@@ -223,7 +223,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
                             }
                         }
 
-                        $where .= "`" . $value[1] . "`";
+                        $where .= "\"" . $value[1] . "\"";
                         if ($value[2] == 1) {
                             if ($value[7]) {
                                 $where .= "," . $this->strQueryValue($value[1], $value[5]) . ")";
@@ -235,13 +235,13 @@ namespace XYO\Web\DataSource\Types\MySQL {
                         if ($value[2] == 0) {
                         } else if ($value[2] == 1) {
                             if ($value[6]) {
-                                $where .= "`" . $value[4] . "`";
+                                $where .= "\"" . $value[4] . "\"";
                             } else {
                                 $where .= $this->strQueryValue($value[1], $value[4]);
                             }
                         } else if ($value[2] == 2) {
                             if ($value[6]) {
-                                $where .= "`" . $value[4] . "`";
+                                $where .= "\"" . $value[4] . "\"";
                             } else {
                                 $where .= $this->strQueryValue($value[1], $value[4]);
                             }
@@ -249,7 +249,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
                             $where .= " AND ";
 
                             if ($value[7]) {
-                                $where .= "`" . $value[5] . "`";
+                                $where .= "\"" . $value[5] . "\"";
                             } else {
                                 $where .= $this->strQueryValue($value[1], $value[5]);
                             }
@@ -259,20 +259,20 @@ namespace XYO\Web\DataSource\Types\MySQL {
                                 $cnt = count($value[4]);
                                 foreach ($value[4] as $valueX_) {
                                     if ($value[6]) {
-                                        $where .= "`" . $valueX_ . "`";
+                                        $where .= "\"" . $valueX_ . "\"";
                                     } else {
-                                        $where .= "'%" . $this->connection->safeLikeValue($valueX_) . "%'";
+                                        $where .= "\"%" . $this->connection->safeLikeValue($valueX_) . "%\"";
                                     }
                                     ++$idx;
                                     if ($idx < $cnt) {
-                                        $where .= " OR `" . $value[1] . "` LIKE ";
+                                        $where .= " OR \"" . $value[1] . "\" LIKE ";
                                     }
                                 }
                             } else {
                                 if ($value[6]) {
-                                    $where .= "`" . $value[4] . "`";
+                                    $where .= "\"" . $value[4] . "\"";
                                 } else {
-                                    $where .= "'%" . $this->connection->safeLikeValue($value[4]) . "%'";
+                                    $where .= "\"%" . $this->connection->safeLikeValue($value[4]) . "%\"";
                                 }
                             }
                         }
@@ -299,27 +299,27 @@ namespace XYO\Web\DataSource\Types\MySQL {
                 if (count($this->_select)) {
                     foreach ($this->_select as $key) {
                         if ($query) {
-                            $query .= ",`" . $key . "`";
+                            $query .= ",\"" . $key . "\"";
                         } else {
-                            $query = "SELECT `" . $key . "`";
+                            $query = "SELECT \"" . $key . "\"";
                         }
                     }
                 } else {
                     foreach ($this->info->fields as $key => &$value) {
                         if ($query) {
-                            $query .= ",`" . $key . "`";
+                            $query .= ",\"" . $key . "\"";
                         } else {
-                            $query = "SELECT `" . $key . "`";
+                            $query = "SELECT \"" . $key . "\"";
                         }
                     }
                 }
 
                 foreach ($this->_function as $key => &$value) {
-                    $query .= "," . $value[0] . "(`" . $key . "`) AS `" . $value[1] . "`";
+                    $query .= "," . $value[0] . "(\"" . $key . "\") AS \"" . $value[1] . "\"";
                 }
             }
 
-            $query .= " FROM `" . $this->name . "`";
+            $query .= " FROM \"" . $this->name . "\"";
 
             $query .= $this->strWhereQuery();
 
@@ -327,9 +327,9 @@ namespace XYO\Web\DataSource\Types\MySQL {
             foreach ($this->group as $key => $value) {
                 if ($value) {
                     if ($group) {
-                        $group .= ",`" . $key . "`";
+                        $group .= ",\"" . $key . "\"";
                     } else {
-                        $group = "GROUP BY `" . $key . "`";
+                        $group = "GROUP BY \"" . $key . "\"";
                     }
                 }
             }
@@ -343,9 +343,9 @@ namespace XYO\Web\DataSource\Types\MySQL {
                 foreach ($this->order as $key => $value) {
                     if ($value) {
                         if ($order) {
-                            $order .= ",`" . $key . "`";
+                            $order .= ",\"" . $key . "\"";
                         } else {
-                            $order = "ORDER BY `" . $key . "`";
+                            $order = "ORDER BY \"" . $key . "\"";
                         }
 
                         if ($value == $this->_order->ascendent) {
@@ -522,9 +522,9 @@ namespace XYO\Web\DataSource\Types\MySQL {
                 }
 
                 if ($query) {
-                    $query .= ",`" . $key . "`";
+                    $query .= ",\"" . $key . "\"";
                 } else {
-                    $query = "INSERT INTO `" . $this->name . "` (`" . $key . "`";
+                    $query = "INSERT INTO \"" . $this->name . "\" (\"" . $key . "\"";
                 }
 
                 if ($queryV) {
@@ -539,7 +539,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
             $result = $this->connection->query($query);
             if ($result) {
                 if ($this->autoIncrement) {
-                    $query = "SELECT LAST_INSERT_ID();";
+                    $query = "SELECT CURRVAL(pg_get_serial_sequence(\"" . $this->name . "\",\"" . $this->autoIncrement . "\"));";
                     $this->table->{$this->autoIncrement} = $this->connection->queryValue($query, null);
                 }
                 return true;
@@ -578,13 +578,13 @@ namespace XYO\Web\DataSource\Types\MySQL {
                         }
 
                         if ($query) {
-                            $query .= ",`" . $key . "`=" . $this->strQueryValue($key, $this->table->$key);
+                            $query .= ",\"" . $key . "\"=" . $this->strQueryValue($key, $this->table->$key);
                         } else {
-                            $query = "UPDATE `" . $this->name . "` SET `" . $key . "`=" . $this->strQueryValue($key, $this->table->$key);
+                            $query = "UPDATE \"" . $this->name . "\" SET \"" . $key . "\"=" . $this->strQueryValue($key, $this->table->$key);
                         }
                     }
 
-                    $query .= " WHERE `" . $this->info->primaryKey . "`=" . $this->strQueryValue($this->info->primaryKey, $tablePrimaryKeyValue) . ";";
+                    $query .= " WHERE \"" . $this->info->primaryKey . "\"=" . $this->strQueryValue($this->info->primaryKey, $tablePrimaryKeyValue) . ";";
 
 
                     $result = $this->connection->query($query);
@@ -603,7 +603,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
 
             if ($this->info->primaryKey) {
                 if (!$this->table->isEmpty($this->info->primaryKey)) {
-                    $query = "DELETE FROM `" . $this->name . "` WHERE " . $this->strQueryWhereClauseForField($this->info->primaryKey, $this->info->primaryKey) . ";";
+                    $query = "DELETE FROM \"" . $this->name . "\" WHERE " . $this->strQueryWhereClauseForField($this->info->primaryKey, $this->info->primaryKey) . ";";
                     $result = $this->connection->query($query);
                     if ($result) {
                         return true;
@@ -619,7 +619,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
                 if ($query) {
                     $query .= " AND " . $this->strQueryWhereClauseForField($key, $key);
                 } else {
-                    $query = "DELETE FROM `" . $this->name . "` WHERE " . $this->strQueryWhereClauseForField($key, $key);
+                    $query = "DELETE FROM \"" . $this->name . "\" WHERE " . $this->strQueryWhereClauseForField($key, $key);
                 }
             }
 
@@ -645,9 +645,9 @@ namespace XYO\Web\DataSource\Types\MySQL {
                     }
 
                     if ($query) {
-                        $query .= ",`" . $key . "`=" . $this->strQueryValue($key, $value);
+                        $query .= ",\"" . $key . "\"=" . $this->strQueryValue($key, $value);
                     } else {
-                        $query = "UPDATE `" . $this->name . "` SET `" . $key . "`=" . $this->strQueryValue($key, $value);
+                        $query = "UPDATE \"" . $this->name . "\" SET \"" . $key . "\"=" . $this->strQueryValue($key, $value);
                     }
 
                 }
@@ -687,8 +687,8 @@ namespace XYO\Web\DataSource\Types\MySQL {
                 if ($tablePrimaryKeyValue) {
 
                     $query = "BEGIN;";
-                    $query .= "SELECT `" . $field . "` FROM `" . $this->name . "` WHERE `" . $this->info->primaryKey . "` = " . $tablePrimaryKeyValue . " FOR UPDATE;";
-                    $query .= "UPDATE `" . $this->name . "` SET `" . $field . "` = `" . $field . "`+" . $value . " WHERE `" . $this->info->primaryKey . "` = " . $tablePrimaryKeyValue . ";";
+                    $query .= "SELECT \"" . $field . "\" FROM \"" . $this->name . "\" WHERE \"" . $this->info->primaryKey . "\" = " . $tablePrimaryKeyValue . " FOR UPDATE;";
+                    $query .= "UPDATE \"" . $this->name . "\" SET \"" . $field . "\" = \"" . $field . "\"+" . $value . " WHERE \"" . $this->info->primaryKey . "\" = " . $tablePrimaryKeyValue . ";";
                     $query .= "COMMIT;";
 
                     $result = $this->connection->multiQuery($query);
@@ -725,8 +725,8 @@ namespace XYO\Web\DataSource\Types\MySQL {
                 if ($tablePrimaryKeyValue) {
 
                     $query = "BEGIN;";
-                    $query .= "SELECT `" . $field . "` FROM `" . $this->name . "` WHERE `" . $this->info->primaryKey . "` = " . $tablePrimaryKeyValue . " FOR UPDATE;";
-                    $query .= "UPDATE `" . $this->name . "` SET `" . $field . "` = `" . $field . "`-" . $value . " WHERE `" . $this->info->primaryKey . "` = " . $tablePrimaryKeyValue . ";";
+                    $query .= "SELECT \"" . $field . "\" FROM \"" . $this->name . "\" WHERE \"" . $this->info->primaryKey . "\" = " . $tablePrimaryKeyValue . " FOR UPDATE;";
+                    $query .= "UPDATE \"" . $this->name . "\" SET \"" . $field . "\" = \"" . $field . "\"-" . $value . " WHERE \"" . $this->info->primaryKey . "\" = " . $tablePrimaryKeyValue . ";";
                     $query .= "COMMIT;";
 
                     $result = $this->connection->multiQuery($query);
@@ -741,7 +741,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
 
         public function destroyStorage()
         {
-            $query = "DROP TABLE IF EXISTS `" . $this->name . "`;";
+            $query = "DROP TABLE IF EXISTS \"" . $this->name . "\";";
             $result = $this->connection->query($query);
             if ($result) {
                 return true;
@@ -751,8 +751,14 @@ namespace XYO\Web\DataSource\Types\MySQL {
 
         public function createStorage()
         {
+            $query = "SELECT \"table_name\" FROM \"information_schema\".\"tables\" WHERE \"table_name\"=\"" . $this->name . "\";";
+            $result = $this->connection->query($query);
+            if ($result) {
+                return true;
+            }
+
             $before = false;
-            $query = "CREATE TABLE IF NOT EXISTS `" . $this->name . "` (";
+            $query = "CREATE TABLE \"" . $this->name . "\" (";
             foreach ($this->info->fields as $key => $value) {
 
                 if ($before) {
@@ -761,17 +767,37 @@ namespace XYO\Web\DataSource\Types\MySQL {
                     $before = true;
                 }
 
-                $query .= "`" . $key . "` " . strtoupper($value[0]);
+                $isPk = false;
+                if ($this->info->primaryKey) {
+                    if ($this->info->primaryKey == $key) {
+                        $isPk = true;
+                    }
+                }
+
+                if ($isPk) {
+                    $query .= "\"" . $key . "\"";
+                } else {
+                    if ($value[0] == "datetime") {
+                        $query .= "\"" . $key . "\" TIMESTAMP";
+                    } else {
+                        $query .= "\"" . $key . "\" " . strtoupper($value[0]);
+                    }
+                }
+
                 if ($value[0] == "varchar") {
                     if (count($value) > 2) {
                         $query .= "(" . strtoupper($value[2]) . ")";
                     }
                     if (count($value) > 1) {
                         if (!is_null($value[1])) {
-                            $query .= " DEFAULT '" . $value[1] . "'";
+                            $query .= " DEFAULT \"" . $value[1] . "\"";
                         }
                     }
                     continue;
+                }
+
+                if ($value[0] == "datetime") {
+                    $query .= "\"" . $key . "\" TIMESTAMP";
                 }
 
                 if (count($value) > 2) {
@@ -782,7 +808,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
                 }
                 if (count($value) > 3) {
                     if ($value[3] == "autoIncrement") {
-                        $query .= " AUTO_INCREMENT";
+                        $query .= " SERIAL";
                     } else {
                         $query .= " " . strtoupper($value[3]);
                     }
@@ -793,19 +819,14 @@ namespace XYO\Web\DataSource\Types\MySQL {
                         if (is_int($value[1])) {
                             $query .= " DEFAULT " . $value[1];
                         } else {
-                            $query .= " DEFAULT '" . $value[1] . "'";
+                            $query .= " DEFAULT \"" . $value[1] . "\"";
                         }
                     }
                 }
             }
 
-            if ($this->info->primaryKey) {
-                if ($before) {
-                    $query .= ",";
-                } else {
-                    $before = true;
-                }
-                $query .= "PRIMARY KEY(`" . $this->info->primaryKey . "`)";
+            if ($isPk) {
+                $query .= " PRIMARY KEY";
             }
 
             $query .= ");";
@@ -823,12 +844,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
                 return true;
             }
             foreach ($this->info->indexes as $index) {
-                $query = "SHOW INDEX FROM `" . $this->name . "` WHERE `Key_name`=\"" . $index . "\";";
-                $result = $this->connection->query($query);
-                if ($result) {
-                    continue;
-                }
-                $query = "CREATE INDEX `" . $index . "` ON `" . $this->name . "` (`" . $index . "`)";
+                $query = "CREATE INDEX IF NOT EXISTS \"" . $index . "\" ON \"" . $this->name . "\" (\"" . $index . "\")";
                 $result = $this->connection->query($query);
                 if ($result) {
                     continue;
@@ -846,7 +862,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
 
         public function storageRemoveField($name)
         {
-            $query = "ALTER TABLE `" . $this->name . "` DROP COLUMN `" . $name . "`;";
+            $query = "ALTER TABLE \"" . $this->name . "\" DROP COLUMN \"" . $name . "\";";
             $result = $this->connection->query($query);
             if ($result) {
                 return true;
@@ -856,7 +872,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
 
         public function storageRenameField($oldName, $newName)
         {
-            $query = "ALTER TABLE `" . $this->name . "` CHANGE COLUMN `" . $oldName . "` `" . $newName . "`;";
+            $query = "ALTER TABLE \"" . $this->name . "\" CHANGE COLUMN \"" . $oldName . "\" \"" . $newName . "\";";
             $result = $this->connection->query($query);
             if ($result) {
                 return true;
@@ -866,19 +882,36 @@ namespace XYO\Web\DataSource\Types\MySQL {
 
         public function storageUpdateField($name)
         {
-            $query = "ALTER TABLE `" . $this->name . "` MODIFY ";
+            $query = "ALTER TABLE \"" . $this->name . "\" MODIFY ";
 
             $key = $name;
             $value = $this->info->fields[$name];
 
-            $query .= "`" . $key . "` " . strtoupper($value[0]);
+            $isPk = false;
+            if ($this->info->primaryKey) {
+                if ($this->info->primaryKey == $key) {
+                    $isPk = true;
+                }
+            }
+
+            if ($isPk) {
+                $query .= "\"" . $key . "\"";
+            } else {
+                if ($value[0] == "datetime") {
+                    $query .= "\"" . $key . "\" TIMESTAMP";
+                } else {
+                    $query .= "\"" . $key . "\" " . strtoupper($value[0]);
+                }
+            }
+
+
             if ($value[0] == "varchar") {
                 if (count($value) > 2) {
                     $query .= "(" . strtoupper($value[2]) . ")";
                 }
                 if (count($value) > 1) {
                     if (!is_null($value[1])) {
-                        $query .= " DEFAULT '" . $value[1] . "'";
+                        $query .= " DEFAULT \"" . $value[1] . "\"";
                     }
                 }
                 $query .= ";";
@@ -897,7 +930,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
             }
             if (count($value) > 3) {
                 if ($value[3] == "autoIncrement") {
-                    $query .= " AUTO_INCREMENT";
+                    $query .= " SERIAL";
                 } else {
                     $query .= " " . strtoupper($value[3]);
                 }
@@ -908,9 +941,13 @@ namespace XYO\Web\DataSource\Types\MySQL {
                     if (is_int($value[1])) {
                         $query .= " DEFAULT " . $value[1];
                     } else {
-                        $query .= " DEFAULT '" . $value[1] . "'";
+                        $query .= " DEFAULT \"" . $value[1] . "\"";
                     }
                 }
+            }
+
+            if ($isPk) {
+                $query .= " PRIMARY KEY";
             }
 
             $query .= ";";

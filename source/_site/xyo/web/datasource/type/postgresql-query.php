@@ -5,7 +5,7 @@
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
 // SPDX-License-Identifier: MIT
 
-namespace XYO\Web\DataSource\Types\MySQL {
+namespace XYO\Web\DataSource\Type\PostgreSQL {
 
     defined("XYO_WEB") or die("Forbidden");
 
@@ -73,7 +73,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
                 $info = $value[0]::$_registry[$value[0]];
                 if ($value[1] == "*") {
                     foreach ($info->fields as $fieldAs => $fieldInfo) {
-                        $this->_fields[$fieldAs] = array("`" . $key . "_`.`" . $fieldAs . "`", $fieldInfo[0], $fieldInfo[1]);
+                        $this->_fields[$fieldAs] = array("\"" . $key . "_\".\"" . $fieldAs . "\"", $fieldInfo[0], $fieldInfo[1]);
                     }
                 }
                 return;
@@ -81,7 +81,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
             if (is_array($value[1])) {
                 $info = $value[0]::$_registry[$value[0]];
                 foreach ($value[1] as $fieldAs => $fieldName) {
-                    $this->_fields[$fieldAs] = array("`" . $key . "_`.`" . $fieldName . "`", $info->fields[$fieldName][0], $info->fields[$fieldName][1]);
+                    $this->_fields[$fieldAs] = array("\"" . $key . "_\".\"" . $fieldName . "\"", $info->fields[$fieldName][0], $info->fields[$fieldName][1]);
                 }
             }
         }
@@ -297,7 +297,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
                                     if ($value[6]) {
                                         $where .= $this->_fields[$valueX_][0];
                                     } else {
-                                        $where .= "'%" . $this->connection->safeLikeValue($valueX_) . "%'";
+                                        $where .= "\"%" . $this->connection->safeLikeValue($valueX_) . "%\"";
                                     }
                                     ++$idx;
                                     if ($idx < $cnt) {
@@ -308,7 +308,7 @@ namespace XYO\Web\DataSource\Types\MySQL {
                                 if ($value[6]) {
                                     $where .= $this->_fields[$value[4]][0];
                                 } else {
-                                    $where .= "'%" . $this->connection->safeLikeValue($value[4]) . "%'";
+                                    $where .= "\"%" . $this->connection->safeLikeValue($value[4]) . "%\"";
                                 }
                             }
                         }
@@ -334,29 +334,29 @@ namespace XYO\Web\DataSource\Types\MySQL {
                 if (count($this->_select)) {
                     foreach ($this->_select as $key) {
                         if ($query) {
-                            $query .= "," . $this->_fields[$key][0] . " AS `" . $key . "`";
+                            $query .= "," . $this->_fields[$key][0] . " AS \"" . $key . "\"";
                         } else {
-                            $query = "SELECT " . $this->_fields[$key][0] . " AS `" . $key . "`";
+                            $query = "SELECT " . $this->_fields[$key][0] . " AS \"" . $key . "\"";
                         }
                     }
                 } else {
                     foreach ($this->_fields as $key => &$value) {
                         if ($query) {
-                            $query .= "," . $value[0] . " AS `" . $key . "`";
+                            $query .= "," . $value[0] . " AS \"" . $key . "\"";
                         } else {
-                            $query = "SELECT " . $value[0] . " AS `" . $key . "`";
+                            $query = "SELECT " . $value[0] . " AS \"" . $key . "\"";
                         }
                     }
                 }
 
                 foreach ($this->_function as $key => &$value) {
-                    $query .= "," . $value[0] . "(" . $this->_fields[$key][0] . ") AS `" . $value[1] . "`";
+                    $query .= "," . $value[0] . "(" . $this->_fields[$key][0] . ") AS \"" . $value[1] . "\"";
                 }
             }
 
-            $query .= " FROM `" . $this->_base[0] . "` AS `" . $this->_base[1] . "`";
+            $query .= " FROM \"" . $this->_base[0] . "\" AS \"" . $this->_base[1] . "\"";
             foreach ($this->_outer as $key => &$value) {
-                $query .= " LEFT OUTER JOIN `" . $value[0] . "` AS `" . $value[1] . "` ON " . $value[2];
+                $query .= " LEFT OUTER JOIN \"" . $value[0] . "\" AS \"" . $value[1] . "\" ON " . $value[2];
             }
 
             $query .= $this->strWhereQuery();

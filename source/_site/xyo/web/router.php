@@ -13,7 +13,8 @@ namespace XYO\Web {
 	require_once("./_site/xyo/web/authorization.php");
 	require_once("./_site/xyo/web/firewall.php");
 	require_once("./_site/xyo/web/client.php");
-	require_once("./_site/xyo/web/datasource/connections.php");
+	require_once("./_site/xyo/web/datasource/connection.php");
+	require_once("./_site/xyo/web/state.php");
 
 	class Router
 	{
@@ -76,7 +77,7 @@ namespace XYO\Web {
 							}
 						}
 
-			\XYO\Web\DataSource\Connections::init();
+			\XYO\Web\DataSource\Connection::init();
 
 			$this->info->routeAuthorization = Authorization::instance();
 			if ($this->info->routeType != $this->info->routeTypeUnknown) {
@@ -94,6 +95,11 @@ namespace XYO\Web {
 
 			if ($this->request->isOPTIONS()) {
 				return;
+			}
+
+			if($this->request->has("_state")) {
+				$state = \XYO\Web\State::instance();
+				$state->decode($this->request->get("_state"));
 			}
 
 			if ($this->info->routeType == $this->info->routeTypePage) {

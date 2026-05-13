@@ -10,6 +10,7 @@ namespace XYO\Web\Main {
 	define("XYO_WEB", 1);
 	require_once("./_site/xyo/web/config.php");
 	require_once("./_site/xyo/web/info.php");
+	require_once("./_site/xyo/web/state.php");
 	require_once("./_site/xyo/web/view.php");
 	require_once("./_site/xyo/web/request.php");
 	require_once("./_site/xyo/web/firewall.php");
@@ -23,6 +24,7 @@ namespace XYO\Web\Main {
 		$config = \XYO\Web\Config::instance();
 		$config->includeByPattern("./config.*.php", "./config.php");
 		\XYO\Web\Info::init();
+		\XYO\Web\State::init();
 		\XYO\Web\View::init();
 		\XYO\Web\Request::init();
 		\XYO\Web\Firewall::init();

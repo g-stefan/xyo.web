@@ -34,7 +34,7 @@ namespace XYO\Web\DataSource {
             static::register();
             $this->_class = static::class;
             $this->_info =& static::$_registry[static::class];
-            $this->_connector = &(Connections::get($connectionName))->connectQuery($this);
+            $this->_connector = &(Connection::get($connectionName))->connectQuery($this);
             $this->empty();
         }
 
@@ -61,6 +61,11 @@ namespace XYO\Web\DataSource {
             $this->_connector->empty();
         }
 
+        public function count()
+        {
+            return $this->_connector->count();
+        }
+
         public function load($start = null, $length = null)
         {
             return $this->_connector->load($start, $length);
@@ -74,11 +79,6 @@ namespace XYO\Web\DataSource {
         public function loadIsValid()
         {
             return $this->_connector->loadIsValid();
-        }
-
-        public function count()
-        {
-            return $this->_connector->count();
         }
 
         public function loadHasNext()

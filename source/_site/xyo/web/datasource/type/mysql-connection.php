@@ -5,11 +5,11 @@
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
 // SPDX-License-Identifier: MIT
 
-namespace XYO\Web\DataSource\Types\PostgreSQL {
+namespace XYO\Web\DataSource\Type\MySQL {
 
     defined("XYO_WEB") or die("Forbidden");
-    require_once("./_site/xyo/web/datasource/types/postgresql-table.php");
-    require_once("./_site/xyo/web/datasource/types/postgresql-query.php");
+    require_once("./_site/xyo/web/datasource/type/mysql-table.php");
+    require_once("./_site/xyo/web/datasource/type/mysql-query.php");
 
     class Connection
     {
@@ -25,21 +25,58 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
         protected $inUse;
         protected $forceUse;
 
+        // SSL
+        protected $sslOn;
+        protected $sslKey;
+        protected $sslCertificate;
+        protected $sslCACertificate;
+        protected $sslCAPath;
+        protected $sslCipherAlgos;
+
         public function __construct($configuration)
         {
             $this->db = null;
             $this->user = "";
             $this->password = "";
-            $this->server = "";
-            $this->port = "";
+            $this->server = "localhost";
+            $this->port = "3306";
             $this->database = "";
             $this->prefix = "";
             $this->inUse = false;
             $this->forceUse = false;
 
+            $this->sslOn = false;
+            $this->sslKey = null;
+            $this->sslCertificate = null;
+            $this->sslCACertificate = null;
+            $this->sslCAPath = null;
+            $this->sslCipherAlgos = null;
+
             foreach ($configuration as $key => $value) {
                 if (property_exists($this, $key)) {
                     $this->$key = $value;
+                }
+                if ($key == "ssl") {
+                    if (array_key_exists("on", $value)) {
+                        if ($value["on"] == "true") {
+                            $this->sslOn = true;
+                        }
+                    }
+                    if (array_key_exists("key", $value)) {
+                        $this->sslKey = $value["key"];
+                    }
+                    if (array_key_exists("certificate", $value)) {
+                        $this->sslCertificate = $value["certificate"];
+                    }
+                    if (array_key_exists("ca_certificate", $value)) {
+                        $this->sslCACertificate = $value["ca_certificate"];
+                    }
+                    if (array_key_exists("ca_path", $value)) {
+                        $this->sslCAPath = $value["ca_path"];
+                    }
+                    if (array_key_exists("cipher_algos", $value)) {
+                        $this->sslCipherAlgos = $value["cipher_algos"];
+                    }
                 }
             }
         }
@@ -53,7 +90,17 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
             if (strlen($this->port)) {
                 $server .= ":" . $this->port;
             }
-            $this->db = @pg_connect("host=" . $this->server . " port=" . $this->port . " dbname=" . $this->database . " user=" . $this->user . " password=" . $this->password);
+            if ($this->sslOn) {
+                $this->db = new \mysqli();
+                $this->db->ssl_set($this->sslKey, $this->sslCertificate, $this->sslCACertificate, $this->sslCAPath, $this->sslCipherAlgos);
+                $this->db->real_connect($server, $this->user, $this->password, $this->database, intval($this->port), null, MYSQLI_CLIENT_SSL);
+                if ($this->db->connect_errno) {
+                    $this->db = null;
+                    return false;
+                }
+                return true;
+            }
+            $this->db = new \mysqli($server, $this->user, $this->password, $this->database);
             if (!$this->db) {
                 $this->db = null;
                 return false;
@@ -69,7 +116,7 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
         public function close()
         {
             if ($this->db) {
-                pg_close($this->db);
+                $this->db->close();
                 $this->db = null;
             }
         }
@@ -77,7 +124,7 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
         public function query($query)
         {
             $this->use();
-            $result = pg_query($this->db, $query);
+            $result = $this->db->query($query);
             if (!$result) {
                 $result = null;
             }
@@ -91,8 +138,8 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
                 }
                 $this->inUse = true;
             }
-            $query = "USE \"" . $this->database . "\";";
-            $result = pg_query($this->db, $query);
+            $query = "USE `" . $this->database . "`;";
+            $result = $this->db->query($query);
             if (!$result) {
                 $result = null;
             }
@@ -101,12 +148,12 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
 
         public function safeValue($value)
         {
-            return pg_escape_string($this->db, $value);
+            return $this->db->real_escape_string($value);
         }
 
         public function safeLikeValue($value)
         {
-            return addcslashes(pg_escape_string($this->db, $value), "%_");
+            return addcslashes($this->db->real_escape_string($value), "%_");
         }
 
         public function safeTypeValue($type, $value)
@@ -130,12 +177,12 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
                 if (is_null($value)) {
                     return "NULL";
                 }
-                return "\"" . $this->safeValue($value) . "\"";
+                return "'" . $this->safeValue($value) . "'";
             } else if ($type == "varchar") {
                 if (is_null($value)) {
                     return "NULL";
                 }
-                return "\"" . $this->safeValue($value) . "\"";
+                return "'" . $this->safeValue($value) . "'";
             } else if ($type == "date") {
                 if (is_null($value)) {
                     return "NULL";
@@ -143,7 +190,7 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
                 if ($value == "NOW") {
                     return "CURDATE()";
                 }
-                return "\"" . $this->safeValue($value) . "\"";
+                return "'" . $this->safeValue($value) . "'";
             } else if ($type == "time") {
                 if (is_null($value)) {
                     return "NULL";
@@ -151,7 +198,7 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
                 if ($value == "NOW") {
                     return "CURTIME()";
                 }
-                return "\"" . $this->safeValue($value) . "\"";
+                return "'" . $this->safeValue($value) . "'";
             } else if ($type == "datetime") {
                 if (is_null($value)) {
                     return "NULL";
@@ -159,7 +206,7 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
                 if ($value == "NOW") {
                     return "NOW()";
                 }
-                return "\"" . $this->safeValue($value) . "\"";
+                return "'" . $this->safeValue($value) . "'";
             }
             return null;
         }
@@ -168,7 +215,7 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
         {
             $result = $this->query($query);
             if ($result) {
-                $data = pg_fetch_row($result);
+                $data = $result->fetch_row();
                 if ($data) {
                     return $data[0];
                 }
@@ -180,7 +227,7 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
         {
             $result = $this->query($query);
             if ($result) {
-                $data = pg_fetch_row($result);
+                $data = $result->fetch_assoc();
                 if ($data) {
                     return $data;
                 }
@@ -190,20 +237,20 @@ namespace XYO\Web\DataSource\Types\PostgreSQL {
 
         public function &connectTable(&$connector = null)
         {
-            $table = new \XYO\Web\DataSource\Types\MySQL\Table($this, $connector);
+            $table = new \XYO\Web\DataSource\Type\MySQL\Table($this, $connector);
             return $table;
         }
 
         public function &connectQuery(&$connector = null)
         {
-            $query = new \XYO\Web\DataSource\Types\MySQL\Query($this, $connector);
+            $query = new \XYO\Web\DataSource\Type\MySQL\Query($this, $connector);
             return $query;
         }
 
         public function multiQuery($query)
         {
             $this->use();
-            $result = pg_query($this->db, $query);
+            $result = $this->db->multi_query($query);
             if (!$result) {
                 $result = null;
             }

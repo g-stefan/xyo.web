@@ -5,7 +5,7 @@
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
 // SPDX-License-Identifier: MIT
 
-namespace XYO\Web\DataSource\Types\SQLite {
+namespace XYO\Web\DataSource\Type\SQLite {
 
     defined("XYO_WEB") or die("Forbidden");
 

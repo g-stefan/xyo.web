@@ -12,6 +12,7 @@ namespace XYO\Web {
     require_once("./_site/xyo/web/info.php");
     require_once("./_site/xyo/web/view.php");
     require_once("./_site/xyo/web/request.php");
+    require_once("./_site/xyo/web/state.php");
 
     class Module
     {
@@ -24,6 +25,7 @@ namespace XYO\Web {
         protected $componentIndex;
         public $id;
         public $site;
+        protected $parent;
 
         public function __construct()
         {
@@ -36,6 +38,7 @@ namespace XYO\Web {
             $this->id = "";
             $info = \XYO\Web\Info::instance();
             $this->site = $info->sitePath;
+            $this->parent = null;
         }
 
         public static function instance()
@@ -68,7 +71,8 @@ namespace XYO\Web {
             }
             $this->components[$id] = $classLibrary::instance();
             $this->components[$id]->id = (strlen($this->id) > 0) ? $this->id . "." . $id : $id;
-            $this->componentOptions[$id] = $options;
+            $this->components[$id]->setParent($this);
+            $this->componentOptions[$id] = $options;            
             return $this->components[$id];
         }
 
@@ -187,56 +191,53 @@ namespace XYO\Web {
             return $this->request->isComponentJSON($this->id);
         }
 
-        public function processAJAXPayload($payload = null, $payloadJs = null)
+        public function processJSPayload($payload = null, $payloadJs = null)
         {
+            $state = \XYO\Web\State::instance();            
+
             $payloadArray = "[";
+            $payloadArray .= "[\"_state\",\"" . $state->encode() . "\"]";
+
             if (!is_null($payload)) {
-                $coma = false;
-                foreach ($payload as $key => $value) {
-                    if ($coma) {
-                        $payloadArray .= ",";
-                    } else {
-                        $coma = true;
-                    }
-                    $payloadArray .= "[\"" . $key . "\",\"" . $value . "\"],";
+                foreach ($payload as $key => $value) {                    
+                    $payloadArray .= ",[\"" . $key . "\",\"" . $value . "\"]";
                 }
             }
+
             if (!is_null($payloadJs)) {
                 $coma = false;
                 foreach ($payloadJs as $key => $value) {
-                    if ($coma) {
-                        $payloadArray .= ",";
-                    } else {
-                        $coma = true;
-                    }
-                    $payloadArray .= "[\"" . $key . "\"," . $value . "],";
+                    $payloadArray .= ",[\"" . $key . "\"," . $value . "]";
                 }
             }
+
             $payloadArray .= "]";
             return $payloadArray;
         }
 
-        public function renderAJAXRequestPost($payload = null, $payloadJs = null)
-        {
-            $payloadArray = $this->processAJAXPayload($payload, $payloadJs);
+        public function renderJSRequestPost($payload = null, $payloadJs = null)
+        {            
+            $payloadArray = $this->processJSPayload($payload, $payloadJs);
             echo "XYO.Web.Component.AJAX.post(\"" . $this->id . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
         }
 
-        public function renderAJAXRequestGet($payload = null, $payloadJs = null)
+        public function renderJSRequestGet($payload = null, $payloadJs = null)
         {
-            $payloadArray = $this->processAJAXPayload($payload, $payloadJs);
+            $payloadArray = $this->processJSPayload($payload, $payloadJs);
             echo "XYO.Web.Component.AJAX.get(\"" . $this->id . "\", " . $payloadArray . ");";
         }
 
-        public function renderAJAXRequestPostForm($payload = null, $payloadJs = null)
+        public function renderJSRequestPostForm($payload = null, $payloadJs = null)
         {
-            $payloadArray = $this->processAJAXPayload($payload, $payloadJs);
+            $payloadArray = $this->processJSPayload($payload, $payloadJs);
             echo "XYO.Web.Component.AJAX.postForm(\"" . $this->id . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
         }
 
         public function renderComponentFormRequiredFields()
         {
+            $state = \XYO\Web\State::instance();
             echo "<input type=\"hidden\" name=\"_component\" value=\"" . $this->id . "\"></input>";
+            echo "<input type=\"hidden\" name=\"_state\" value=\"" . $state->encode() . "\"></input>";
             echo "<input type=\"hidden\" name=\"_token\" value=\"" . $this->view->token . "\"></input>";
         }
 
@@ -286,6 +287,32 @@ namespace XYO\Web {
             $str = ob_get_contents();
             ob_end_clean();
             return $str;
+        }
+
+        public function setState($name, $value)
+        {
+            $state = \XYO\Web\State::instance();
+            $state->set($this->id, $name, $value);
+        }
+
+        public function getState($name, $default = null)
+        {
+            $state = \XYO\Web\State::instance();
+            return $state->get($this->id, $name, $default);
+        }
+
+        public function hasState($name)
+        {
+            $state = \XYO\Web\State::instance();
+            return $state->has($this->id, $name);
+        }
+
+        public function setParent($parent) {
+            $this->parent = $parent;
+        }
+
+        public function getParent() {
+            return $this->parent;
         }
 
     }

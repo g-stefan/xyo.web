@@ -7,7 +7,7 @@ messageAction("make amalgam-php [" + Project.name + "]");
 
 function processAmalgam(path, phpSourceFiles, file) {
 
-	phpSource = Shell.fileGetContents("./output/_site/web/release/web.header.php");
+	phpSource = Shell.fileGetContents("./output/_site/xyo/web/release/web.header.php");
 	for (i = 0; i < phpSourceFiles.length; ++i) {
 
 		Shell.system("php \"fabricare/make-amalgam-php.php\" \"./output/" + path + "/" + phpSourceFiles[i] + "\" \"temp/temp.php\"");
@@ -18,6 +18,8 @@ function processAmalgam(path, phpSourceFiles, file) {
 
 		for (j = 0; j < phpSourceFiles.length; ++j) {
 			search = "require_once (\"./" + path + "/" + phpSourceFiles[j] + "\");";
+			content = content.replace(search, "");
+			search = "require_once(\"./" + path + "/" + phpSourceFiles[j] + "\");";
 			content = content.replace(search, "");
 		};
 
@@ -34,6 +36,7 @@ phpSourceFiles = [
 	"info.php",
 	"unique-list.php",
 	"grouped-list.php",
+	"state.php",
 	"view.php",
 	"request.php",
 	"authorization.php",
@@ -45,17 +48,21 @@ phpSourceFiles = [
 	"datasource/query-info.php",
 	"datasource/query.php",
 	"datasource/table.php",
-	"datasource/connections.php",
+	"datasource/connection.php",
 	"router.php",
+	"language.php",
 	"module.php",
 	"component.php",
-	"component-ajax.php",
+	"component-form.php",
 	"page.php",
 	"layout.php",
 	"main.php"
 ];
 
-processAmalgam("_site/web", phpSourceFiles, "./output/_site/web.php");
+processAmalgam("_site/xyo/web", phpSourceFiles, "./output/_site/xyo/web/web.php");
+for (file of phpSourceFiles) {
+	Shell.remove("./output/_site/xyo/web/" + file);
+};
 
 // ---
 
@@ -65,9 +72,9 @@ phpSourceFiles = [
 	"mysql-connection.php"
 ];
 
-processAmalgam("_site/web.ds", phpSourceFiles, "./output/_site/web.ds/mysql-connection.php");
-Shell.remove("./output/_site/web.ds/mysql-table.php");
-Shell.remove("./output/_site/web.ds/mysql-query.php");
+processAmalgam("_site/xyo/web/datasource/type", phpSourceFiles, "./output/_site/xyo/web/datasource/type/mysql-connection.php");
+Shell.remove("./output/_site/xyo/web/datasource/type/mysql-table.php");
+Shell.remove("./output/_site/xyo/web/datasource/type/mysql-query.php");
 
 // ---
 
@@ -77,10 +84,23 @@ phpSourceFiles = [
 	"sqlite-connection.php"
 ];
 
-processAmalgam("_site/web.ds", phpSourceFiles, "./output/_site/web.ds/sqlite-connection.php");
-Shell.remove("./output/_site/web.ds/sqlite-table.php");
-Shell.remove("./output/_site/web.ds/sqlite-query.php");
+processAmalgam("_site/xyo/web/datasource/type", phpSourceFiles, "./output/_site/xyo/web/datasource/type/sqlite-connection.php");
+Shell.remove("./output/_site/xyo/web/datasource/type/sqlite-table.php");
+Shell.remove("./output/_site/xyo/web/datasource/type/sqlite-query.php");
 
 // ---
 
-Shell.removeDirRecursivelyForce("output/_site/web");
+phpSourceFiles = [
+	"postgresql-table.php",
+	"postgresql-query.php",
+	"postgresql-connection.php"
+];
+
+processAmalgam("_site/xyo/web/datasource/type", phpSourceFiles, "./output/_site/xyo/web/datasource/type/postgresql-connection.php");
+Shell.remove("./output/_site/xyo/web/datasource/type/postgresql-table.php");
+Shell.remove("./output/_site/xyo/web/datasource/type/postgresql-query.php");
+
+// ---
+
+Shell.removeDirRecursively("./output/_site/xyo/web/client");
+Shell.removeDirRecursively("./output/_site/xyo/web/release");

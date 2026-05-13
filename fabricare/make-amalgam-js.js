@@ -14,18 +14,18 @@ jsSourceFiles = [
 	"component.js"
 ];
 
-jsSource = Shell.fileGetContents("./output/_site/web/release/web.header.js");
+jsSource = Shell.fileGetContents("./output/_site/xyo/web/release/web.header.js");
 for (var i = 0; i < jsSourceFiles.length; ++i) {
-	content = Shell.fileGetContents("./output/_site/web/client/" + jsSourceFiles[i]);
+	content = Shell.fileGetContents("./output/_site/xyo/web/client/" + jsSourceFiles[i]);
 	content = content.replace("/*!\r\n", "/*\r\n");
 	content = content.replace("/*!\n", "/*\n");
 	jsSource += content;
 };
 
 Shell.filePutContents("./temp/web.amalgam.js", jsSource);
-Shell.system("uglifyjs -c -m -o output/_site/web.js --comments \"/^!/\" temp/web.amalgam.js");
+Shell.system("uglifyjs -c -m -o output/_site/xyo/web/web.js --comments \"/^!/\" temp/web.amalgam.js");
 
-Shell.removeDirRecursivelyForce("output/_site/web/client");
+Shell.removeDirRecursivelyForce("output/_site/xyo/web/client");
 
-Shell.remove("output/_site/web/client.php");
-Shell.copyFile("output/_site/web/release/client.php", "output/_site/web/client.php");
+Shell.remove("output/_site/xyo/web/client.php");
+Shell.copyFile("output/_site/xyo/web/release/client.php", "output/_site/xyo/web/client.php");

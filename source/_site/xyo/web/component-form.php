@@ -66,7 +66,7 @@ namespace XYO\Web {
             $this->view->renderJS(function () use (&$payload, &$payloadJs) {
                 echo "document.getElementById(\"" . $this->getFormId() . "\").addEventListener(\"submit\",function(e){";
                 echo "e.preventDefault();";
-                $this->renderAJAXRequestPostForm($payload, $payloadJs);
+                $this->renderJSRequestPostForm($payload, $payloadJs);
                 echo "});";
             });
         }

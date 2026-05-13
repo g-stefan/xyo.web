@@ -5,24 +5,37 @@
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
 // SPDX-License-Identifier: MIT
 
-namespace XYO\Web\DataSource\Types\SQLite {
+namespace XYO\Web\DataSource\Type\PostgreSQL {
 
     defined("XYO_WEB") or die("Forbidden");
-    require_once("./_site/xyo/web/datasource/types/sqlite-table.php");
-    require_once("./_site/xyo/web/datasource/types/sqlite-query.php");
+    require_once("./_site/xyo/web/datasource/type/postgresql-table.php");
+    require_once("./_site/xyo/web/datasource/type/postgresql-query.php");
 
     class Connection
     {
 
         protected $db;
+
+        protected $user;
+        protected $password;
+        protected $server;
+        protected $port;
         protected $database;
         protected $prefix;
+        protected $inUse;
+        protected $forceUse;
 
         public function __construct($configuration)
         {
             $this->db = null;
+            $this->user = "";
+            $this->password = "";
+            $this->server = "";
+            $this->port = "";
             $this->database = "";
             $this->prefix = "";
+            $this->inUse = false;
+            $this->forceUse = false;
 
             foreach ($configuration as $key => $value) {
                 if (property_exists($this, $key)) {
@@ -36,9 +49,12 @@ namespace XYO\Web\DataSource\Types\SQLite {
             if ($this->db) {
                 return true;
             }
-            try {
-                $this->db = new \SQLite3($this->database);
-            } catch (\Exception $e) {
+            $server = $this->server;
+            if (strlen($this->port)) {
+                $server .= ":" . $this->port;
+            }
+            $this->db = @pg_connect("host=" . $this->server . " port=" . $this->port . " dbname=" . $this->database . " user=" . $this->user . " password=" . $this->password);
+            if (!$this->db) {
                 $this->db = null;
                 return false;
             }
@@ -53,14 +69,30 @@ namespace XYO\Web\DataSource\Types\SQLite {
         public function close()
         {
             if ($this->db) {
-                $this->db->close();
+                pg_close($this->db);
                 $this->db = null;
             }
         }
 
         public function query($query)
         {
-            $result = $this->db->query($query);
+            $this->use();
+            $result = pg_query($this->db, $query);
+            if (!$result) {
+                $result = null;
+            }
+            return $result;
+        }
+        public function use()
+        {
+            if (!$this->forceUse) {
+                if ($this->inUse) {
+                    return true;
+                }
+                $this->inUse = true;
+            }
+            $query = "USE \"" . $this->database . "\";";
+            $result = pg_query($this->db, $query);
             if (!$result) {
                 $result = null;
             }
@@ -69,74 +101,77 @@ namespace XYO\Web\DataSource\Types\SQLite {
 
         public function safeValue($value)
         {
-            return \SQLite3::escapeString($value);
+            return pg_escape_string($this->db, $value);
         }
 
         public function safeLikeValue($value)
         {
-            return addcslashes(\SQLite3::escapeString($value), "%_");
+            return addcslashes(pg_escape_string($this->db, $value), "%_");
         }
 
         public function safeTypeValue($type, $value)
         {
             if ($type == "int") {
                 if (strcmp($value, "DEFAULT") == 0) {
-                    return "NULL";
+                    return "DEFAULT";
                 }
                 return $this->safeValue(1 * $value);
             } else if ($type == "bigint") {
                 if (strcmp($value, "DEFAULT") == 0) {
-                    return "NULL";
+                    return "DEFAULT";
                 }
                 return $this->safeValue(1 * $value);
             } else if ($type == "float") {
                 if (strcmp($value, "DEFAULT") == 0) {
-                    return "NULL";
+                    return "DEFAULT";
                 }
                 return $this->safeValue(1 * $value);
             } else if ($type == "text") {
                 if (is_null($value)) {
                     return "NULL";
                 }
-                return "'" . $this->safeValue($value) . "'";
+                return "\"" . $this->safeValue($value) . "\"";
             } else if ($type == "varchar") {
                 if (is_null($value)) {
                     return "NULL";
                 }
-                return "'" . $this->safeValue($value) . "'";
+                return "\"" . $this->safeValue($value) . "\"";
             } else if ($type == "date") {
                 if (is_null($value)) {
                     return "NULL";
                 }
                 if ($value == "NOW") {
-                    return "DATE('NOW','localtime')";
+                    return "CURDATE()";
                 }
-                return "'" . $this->safeValue($value) . "'";
+                return "\"" . $this->safeValue($value) . "\"";
             } else if ($type == "time") {
                 if (is_null($value)) {
                     return "NULL";
                 }
                 if ($value == "NOW") {
-                    return "TIME('NOW','localtime')";
+                    return "CURTIME()";
                 }
-                return "'" . $this->safeValue($value) . "'";
+                return "\"" . $this->safeValue($value) . "\"";
             } else if ($type == "datetime") {
                 if (is_null($value)) {
                     return "NULL";
                 }
                 if ($value == "NOW") {
-                    return "DATETIME('NOW','localtime')";
+                    return "NOW()";
                 }
-                return "'" . $this->safeValue($value) . "'";
+                return "\"" . $this->safeValue($value) . "\"";
             }
             return null;
         }
 
         public function queryValue($query, $default = null)
         {
-            $result = $this->db->querySingle($query);
+            $result = $this->query($query);
             if ($result) {
-                return $result;
+                $data = pg_fetch_row($result);
+                if ($data) {
+                    return $data[0];
+                }
             }
             return $default;
         }
@@ -145,7 +180,7 @@ namespace XYO\Web\DataSource\Types\SQLite {
         {
             $result = $this->query($query);
             if ($result) {
-                $data = $result->fetchArray(SQLITE3_ASSOC);
+                $data = pg_fetch_row($result);
                 if ($data) {
                     return $data;
                 }
@@ -155,14 +190,24 @@ namespace XYO\Web\DataSource\Types\SQLite {
 
         public function &connectTable(&$connector = null)
         {
-            $table = new \XYO\Web\DataSource\Types\SQLite\Table($this, $connector);
+            $table = new \XYO\Web\DataSource\Type\MySQL\Table($this, $connector);
             return $table;
         }
 
         public function &connectQuery(&$connector = null)
         {
-            $query = new \XYO\Web\DataSource\Types\SQLite\Query($this, $connector);
+            $query = new \XYO\Web\DataSource\Type\MySQL\Query($this, $connector);
             return $query;
+        }
+
+        public function multiQuery($query)
+        {
+            $this->use();
+            $result = pg_query($this->db, $query);
+            if (!$result) {
+                $result = null;
+            }
+            return $result;
         }
 
         public function getPrefix()

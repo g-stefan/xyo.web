@@ -5,7 +5,7 @@
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
 // SPDX-License-Identifier: MIT
 
-namespace XYO\Web\DataSource\Types\SQLite {
+namespace XYO\Web\DataSource\Type\SQLite {
 
     defined("XYO_WEB") or die("Forbidden");
 
@@ -775,10 +775,28 @@ namespace XYO\Web\DataSource\Types\SQLite {
                 if ($this->info->primaryKey == $key) {
                     if (strcmp($value[0], "int") == 0) {
                         $query .= "[" . $key . "] INTEGER PRIMARY KEY ASC";
+
+                        if (count($value) > 3) {
+                            if ($value[3] == "autoIncrement") {
+                                $query .= " AUTOINCREMENT";
+                            } else {
+                                $query .= " " . strtoupper($value[3]);
+                            }
+                        }
+
                         continue;
                     }
                     if (strcmp($value[0], "bigint") == 0) {
                         $query .= "[" . $key . "] INTEGER PRIMARY KEY ASC";
+
+                        if (count($value) > 3) {
+                            if ($value[3] == "autoIncrement") {
+                                $query .= " AUTOINCREMENT";
+                            } else {
+                                $query .= " " . strtoupper($value[3]);
+                            }
+                        }
+
                         continue;
                     }
                 }
@@ -881,6 +899,15 @@ namespace XYO\Web\DataSource\Types\SQLite {
                 if (strcmp($value[0], "int") == 0) {
                     $query .= "[" . $key . "] INTEGER PRIMARY KEY ASC";
                     $query .= ";";
+
+                    if (count($value) > 3) {
+                        if ($value[3] == "autoIncrement") {
+                            $query .= " AUTOINCREMENT";
+                        } else {
+                            $query .= " " . strtoupper($value[3]);
+                        }
+                    }
+
                     $result = $this->connection->query($query);
                     if ($result) {
                         return true;
@@ -890,6 +917,15 @@ namespace XYO\Web\DataSource\Types\SQLite {
                 if (strcmp($value[0], "bigint") == 0) {
                     $query .= "[" . $key . "] INTEGER PRIMARY KEY ASC";
                     $query .= ";";
+
+                    if (count($value) > 3) {
+                        if ($value[3] == "autoIncrement") {
+                            $query .= " AUTOINCREMENT";
+                        } else {
+                            $query .= " " . strtoupper($value[3]);
+                        }
+                    }
+
                     $result = $this->connection->query($query);
                     if ($result) {
                         return true;

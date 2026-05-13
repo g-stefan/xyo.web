@@ -10,17 +10,17 @@ namespace XYO\Web\DataSource {
     defined("XYO_WEB") or die("Forbidden");
     require_once("./_site/xyo/web/config.php");
 
-    class Connections
+    class Connection
     {
         private static $instance = null;
 
-        protected $connections;
+        protected $connection;
         protected $sources;
         protected $_null;
 
         protected function __construct()
         {
-            $this->connections = array();
+            $this->connection = array();
             $this->sources = array();
         }
 
@@ -31,7 +31,7 @@ namespace XYO\Web\DataSource {
 
         public static function init()
         {
-            self::$instance = new Connections();
+            self::$instance = new Connection();
             self::$instance->_null = null;
             self::processConfig();
         }
@@ -40,8 +40,8 @@ namespace XYO\Web\DataSource {
         {
             $config = \XYO\Web\Config::instance();
             if ($config->has("dataSource")) {
-                $connections = $config->get("dataSource")->getArray("connections");
-                foreach ($connections as $connection => $config) {
+                $connection = $config->get("dataSource")->getArray("connection");
+                foreach ($connection as $connection => $config) {
                     self::set($connection, $config);
                 }
             }
@@ -52,7 +52,7 @@ namespace XYO\Web\DataSource {
             if (!array_key_exists("type", $configuration)) {
                 return false;
             }
-            $typeSource = "./_site/xyo/web/datasource/types/" . $configuration["type"] . "-connection.php";
+            $typeSource = "./_site/xyo/web/datasource/type/" . $configuration["type"] . "-connection.php";
             if (!file_exists($typeSource)) {
                 return false;
             }
@@ -62,12 +62,12 @@ namespace XYO\Web\DataSource {
             } else {
                 $typeClass = self::$instance->sources[$typeSource];
             }
-            self::$instance->connections[$name] = new $typeClass($configuration);
+            self::$instance->connection[$name] = new $typeClass($configuration);
         }
 
         public static function has($name)
         {
-            return array_key_exists($name, self::$instance->connections);
+            return array_key_exists($name, self::$instance->connection);
         }
 
         public static function &get($name = null)
@@ -75,11 +75,11 @@ namespace XYO\Web\DataSource {
             if (is_null($name)) {
                 $name = "db";
             }
-            if (!array_key_exists($name, self::$instance->connections)) {
+            if (!array_key_exists($name, self::$instance->connection)) {
                 return self::$instance->_null;
             }
-            self::$instance->connections[$name]->open();
-            return self::$instance->connections[$name];
+            self::$instance->connection[$name]->open();
+            return self::$instance->connection[$name];
         }
 
     }

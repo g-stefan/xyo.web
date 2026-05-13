@@ -16,4 +16,4 @@ require_once ("./_site/xyo/web/datasource/table-info.php");
 require_once ("./_site/xyo/web/datasource/query-info.php");
 require_once ("./_site/xyo/web/datasource/query.php");
 require_once ("./_site/xyo/web/datasource/table.php");
-require_once ("./_site/xyo/web/datasource/connections.php");
+require_once ("./_site/xyo/web/datasource/connection.php");

@@ -10,7 +10,7 @@ namespace XYO\Web\DataSource {
     defined("XYO_WEB") or die("Forbidden");
     require_once("./_site/xyo/web/datasource/empty-field.php");
     require_once("./_site/xyo/web/datasource/table-info.php");
-    require_once("./_site/xyo/web/datasource/connections.php");
+    require_once("./_site/xyo/web/datasource/connection.php");
 
     class Table extends \stdClass
     {
@@ -35,7 +35,7 @@ namespace XYO\Web\DataSource {
             static::register();
             $this->_class = static::class;
             $this->_info =& static::$_registry[static::class];
-            $this->_connector = &(Connections::get($connectionName))->connectTable($this);
+            $this->_connector = &(Connection::get($connectionName))->connectTable($this);
             $this->empty();
         }
 
@@ -64,6 +64,11 @@ namespace XYO\Web\DataSource {
             }
         }
 
+        public function count()
+        {
+            return $this->_connector->count();
+        }
+
         public function load($start = null, $length = null)
         {
             return $this->_connector->load($start, $length);
@@ -77,11 +82,6 @@ namespace XYO\Web\DataSource {
         public function loadIsValid()
         {
             return $this->_connector->loadIsValid();
-        }
-
-        public function count()
-        {
-            return $this->_connector->count();
         }
 
         public function loadHasNext()
@@ -107,6 +107,11 @@ namespace XYO\Web\DataSource {
         public function save()
         {
             return $this->_connector->save();
+        }
+
+        public function delete()
+        {
+            return $this->_connector->delete();
         }
 
         public function update($what = array())
@@ -157,6 +162,36 @@ namespace XYO\Web\DataSource {
         public function setOperator($key, $operator, $v1Value = null, $v2Value = null, $v1IsKey = false, $v2IsKey = false)
         {
             return $this->_connector->setOperator($key, $operator, $v1Value, $v2Value, $v1IsKey, $v2IsKey);
+        }
+
+        public function createStorage()
+        {
+            return $this->_connector->createStorage();
+        }
+
+        public function destroyStorage()
+        {
+            return $this->_connector->destroyStorage();
+        }
+
+        public function recreateStorage()
+        {
+            return $this->_connector->recreateStorage();
+        }
+
+        public function storageRemoveField($name)
+        {
+            return $this->_connector->storageRemoveField($name);
+        }
+
+        public function storageRenameField($oldName, $newName)
+        {
+            return $this->_connector->storageRenameField($oldName, $newName);
+        }
+
+        public function storageUpdateField($name)
+        {
+            return $this->_connector->storageUpdateField($name);
         }
 
     }

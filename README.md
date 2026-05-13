@@ -4,7 +4,7 @@ PHP framework for web application
 
 ## License
 
-Copyright (c) 2024 Grigore Stefan <g_stefan@yahoo.com>
+Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
 Licensed under the [MIT](LICENSE) license.
 
 **This is a compilation of different works.**
