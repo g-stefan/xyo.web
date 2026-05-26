@@ -1,118 +1,222 @@
 <?php
+
 // XYO.Web
-// Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// MIT License (MIT) <http://opensource.org/licenses/MIT>
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web {
+namespace XYO\Web;
 
-    defined("XYO_WEB") or die("Forbidden");
+defined("XYO_WEB") or die("Forbidden");
 
-    class Request
+class Request
+{
+    protected $_cookie;
+    protected $_query;
+    protected $_post;
+    protected $_requestMethod;
+    protected $info;
+    protected $request;
+
+    public function __construct($info)
     {
-        private static $instance = null;
-        protected $request;
-
-        protected function __construct($defaultRequest = null)
-        {
-            $this->request = array();
-            if (is_null($defaultRequest)) {
-                return;
-            }
-
-            foreach (array_keys($defaultRequest) as $name) {
-                $this->request[$name] = $defaultRequest[$name];
-            }
-        }
-
-        public static function instance()
-        {
-            return self::$instance;
-        }
-
-        public static function init()
-        {
-            self::$instance = new Request(array_merge($_COOKIE, $_GET, $_POST));
-        }
-
-        public function set($name, $value)
-        {
-            $this->request[$name] = $value;
-        }
-
-        public function get($name, $default = null)
-        {
-            if (!array_key_exists($name, $this->request)) {
-                return $default;
-            }
-            return $this->request[$name];
-        }
-
-        public function remove($name)
-        {
-            unset($this->request[$name]);
-        }
-
-        public function clear()
-        {
-            $this->request = array();
-        }
-
-        public function has($name)
-        {
-            return array_key_exists($name, $this->request);
-        }
-
-        public function isOPTIONS(){
-            return (strcmp($_SERVER["REQUEST_METHOD"], "OPTIONS") == 0);
-        }
-
-        public function isGET(){
-            return (strcmp($_SERVER["REQUEST_METHOD"], "GET") == 0);
-        }
-
-        public function isPOST(){
-            return (strcmp($_SERVER["REQUEST_METHOD"], "POST") == 0);
-        }        
-
-        public function isAJAX(){
-            return (strcmp($this->get("_ajax", "0"),"1")==0);
-        }
-
-        public function isJSON(){
-            if(array_key_exists("CONTENT_TYPE",$_SERVER)){
-                if(strcmp(strtolower($_SERVER["CONTENT_TYPE"]),"application/json")==0){
-                    return true;
-                }
-            }            
-            return (strcmp($this->get("_json", "0"),"1")==0);
-        }
-
-        public function isAPI()
-        {
-            $info = \XYO\Web\Info::instance();
-            return ($info->routeType == $info->routeTypeAPI);
-        }
-
-        public function isComponent($id) {
-            $component=$this->get("_component","");
-            return (strcmp($component,$id)==0);
-        }
-        
-        public function isComponentAJAX($id) {
-            if(!$this->isAJAX()){
-                return false;   
-            }            
-            return $this->isComponent($id);
-        }
-
-        public function isComponentJSON($id) {
-            if(!$this->isJSON()){
-                return false;   
-            }            
-            return $this->isComponent($id);
-        }
-
+        $this->info = $info;
+        $this->_cookie = $_COOKIE;
+        $this->_query = $_GET;
+        $this->_post = $_POST;
+        $this->_requestMethod = $_SERVER["REQUEST_METHOD"] ?? "GET";
     }
+
+    // ---
+
+    public function setCookie($name, $value)
+    {
+        $this->_cookie[$name] = $value;
+    }
+
+    public function getCookie($name, $default = null)
+    {
+        if (!array_key_exists($name, $this->_cookie)) {
+            return $default;
+        }
+        return $this->_cookie[$name];
+    }
+
+    public function removeCookie($name)
+    {
+        unset($this->_cookie[$name]);
+    }
+
+    public function clearCookie()
+    {
+        $this->_cookie = [];
+    }
+
+    public function hasCookie($name)
+    {
+        return array_key_exists($name, $this->_cookie);
+    }
+
+    // ---
+
+    public function setQuery($name, $value)
+    {
+        $this->_query[$name] = $value;
+    }
+
+    public function getQuery($name, $default = null)
+    {
+        if (!array_key_exists($name, $this->_query)) {
+            return $default;
+        }
+        return $this->_query[$name];
+    }
+
+    public function removeQuery($name)
+    {
+        unset($this->_query[$name]);
+    }
+
+    public function clearQuery()
+    {
+        $this->_query = [];
+    }
+
+    public function hasQuery($name)
+    {
+        return array_key_exists($name, $this->_query);
+    }
+
+    // ---
+
+    public function setPost($name, $value)
+    {
+        $this->_post[$name] = $value;
+    }
+
+    public function getPost($name, $default = null)
+    {
+        if (!array_key_exists($name, $this->_post)) {
+            return $default;
+        }
+        return $this->_post[$name];
+    }
+
+    public function removePost($name)
+    {
+        unset($this->_post[$name]);
+    }
+
+    public function clearPost()
+    {
+        $this->_post = [];
+    }
+
+    public function hasPost($name)
+    {
+        return array_key_exists($name, $this->_post);
+    }
+
+    // ---
+
+    public function get($name, $default = null)
+    {
+        $value = $this->getQuery($name, $default);
+        $value = $this->getPost($name, $value);
+        return $value;
+    }
+
+    // ---
+
+    public function isOPTIONS()
+    {
+        return ($this->_requestMethod === "OPTIONS");
+    }
+
+    public function isGET()
+    {
+        return ($this->_requestMethod === "GET");
+    }
+
+    public function isPOST()
+    {
+        return ($this->_requestMethod === "POST");
+    }
+
+    public function isPUT()
+    {
+        return ($this->_requestMethod === "PUT");
+    }
+
+    public function isPATCH()
+    {
+        return ($this->_requestMethod === "PATCH");
+    }
+
+    public function isDELETE()
+    {
+        return ($this->_requestMethod === "DELETE");
+    }
+
+    public function isAJAX()
+    {
+        if ($this->getPost("_ajax", "0") === "1") {
+            return true;
+        }
+        if ($this->getQuery("_ajax", "0") === "1") {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function isJSON()
+    {
+        if (array_key_exists("CONTENT_TYPE", $_SERVER)) {
+            if (strtolower($_SERVER["CONTENT_TYPE"]) === "application/json") {
+                return true;
+            }
+        }
+        if ($this->getPost("_json", "0") === "1") {
+            return true;
+        }
+        if ($this->getQuery("_json", "0") === "1") {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function isAPI()
+    {
+        return ($this->info->routeType == $this->info->routeTypeAPI);
+    }
+
+    public function isComponent($id)
+    {
+        $component = $this->get("_component", "");
+        return ($component === $id);
+    }
+
+    public function isComponentAJAX($id)
+    {
+        if (!$this->isAJAX()) {
+            return false;
+        }
+        return $this->isComponent($id);
+    }
+
+    public function isComponentJSON($id)
+    {
+        if (!$this->isJSON()) {
+            return false;
+        }
+        return $this->isComponent($id);
+    }
+
+    public function getTabId()
+    {
+        $tab = preg_replace("/[^a-z0-9]/i", "", (string) $this->get("_tab", ""));
+        return substr($tab, 0, 32) ?: "_default";
+    }
+    
 }

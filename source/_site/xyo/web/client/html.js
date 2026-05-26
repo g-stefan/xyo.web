@@ -1,9 +1,7 @@
 /*!
 // XYO.Web
-// Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// MIT License (MIT) <http://opensource.org/licenses/MIT>
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 */
 
 XYO.Web.HTML = {};
@@ -79,4 +77,51 @@ XYO.Web.HTML.update = function (id, inputHTML, nonce, fnError) {
 		XYO.Web.Script.run(infoHTML.script, nonce);
 	};
 	return el;
+};
+
+/**
+ * Update html on multiple elements
+ * @param {string} inputList - Array of [id, HTML]
+ * @param {string} nonce - nonce required to run script
+ * @param {function} [fnError] - Call on error - fnError()
+ * @returns {element} Element
+ */
+XYO.Web.HTML.batchUpdate = function (inputList, nonce, fnError) {
+	var elList = [];
+	var i;
+	for (i = 0; i < inputList.length; ++i) {
+		elList[i] = document.getElementById(inputList[i][0]);
+		if (!elList[i]) {
+			if (fnError) {
+				fnError();
+			};
+			return null;
+		};
+	};
+	var elHTML = [];
+	var elStyle = "";
+	var elScript = "";
+	for (i = 0; i < inputList.length; ++i) {
+		elHTML[i] = XYO.Web.HTML.extract(inputList[i][1]);
+		if (elHTML[i].style.length > 0) {
+			elStyle = elStyle + elHTML[i].style;
+		};
+		if (elHTML[i].script.length > 0) {
+			elScript = elScript + elHTML[i].script;
+		};
+	};
+
+	if (elStyle.length > 0) {
+		XYO.Web.Style.run(elStyle, nonce);
+	};
+
+	for (i = 0; i < inputList.length; ++i) {
+		elList[i].innerHTML = elHTML[i].html;
+	};
+
+	if (elScript.length > 0) {
+		XYO.Web.Script.run(elScript, nonce);
+	};
+
+	return elList;
 };

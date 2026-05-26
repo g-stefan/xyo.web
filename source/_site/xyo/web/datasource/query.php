@@ -1,125 +1,98 @@
 <?php
+
 // XYO.Web
-// Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// MIT License (MIT) <http://opensource.org/licenses/MIT>
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web\DataSource {
+namespace XYO\Web\DataSource;
 
-    defined("XYO_WEB") or die("Forbidden");
-    require_once("./_site/xyo/web/datasource/query-info.php");
+defined("XYO_WEB") or die("Forbidden");
+require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/empty-field.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/order.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/query-info.php");
 
-    class Query extends \stdClass
+#[\AllowDynamicProperties]
+class Query extends \stdClass
+{
+    private $__connector;
+
+    public function __construct($connection)
     {
-
-        public $_class = null;
-        public $_connector;
-
-        public static $_registry = null;
-        public static $_empty = null;
-        public static $_order = null;
-        public $_info = null;
-
-        public function __construct(&$connectionName = null)
-        {
-            if (is_null(static::$_registry)) {
-                static::$_registry = array();
-                static::$_empty = new EmptyField();
-                static::$_order = new \stdClass();
-                static::$_order->none = 0;
-                static::$_order->ascendent = 1;
-                static::$_order->descendent = 2;
-            }
-            static::register();
-            $this->_class = static::class;
-            $this->_info =& static::$_registry[static::class];
-            $this->_connector = &(Connection::get($connectionName))->connectQuery($this);
-            $this->empty();
-        }
-
-        public static function register()
-        {
-            if (!array_key_exists(static::class, static::$_registry)) {
-                static::$_registry[static::class] = new QueryInfo();
-                static::descriptor(static::$_registry[static::class]);
-            }
-        }
-
-        public static function descriptor(&$info)
-        {
-
-        }
-
-        public function isEmpty($key)
-        {
-            return ($this->$key instanceof EmptyField);
-        }
-
-        public function empty()
-        {
-            $this->_connector->empty();
-        }
-
-        public function count()
-        {
-            return $this->_connector->count();
-        }
-
-        public function load($start = null, $length = null)
-        {
-            return $this->_connector->load($start, $length);
-        }
-
-        public function tryLoad($start = null, $length = null)
-        {
-            return $this->_connector->tryLoad($start, $length);
-        }
-
-        public function loadIsValid()
-        {
-            return $this->_connector->loadIsValid();
-        }
-
-        public function loadHasNext()
-        {
-            return $this->_connector->loadHasNext();
-        }
-
-        public function loadNext()
-        {
-            return $this->_connector->loadNext();
-        }
-
-        public function clear($key = false)
-        {
-            return $this->_connector->clear($key);
-        }
-
-        public function setOrder($key, $value)
-        {
-            return $this->_connector->setOrder($key, $value);
-        }
-
-        public function setGroup($key, $value)
-        {
-            return $this->_connector->setGroup($key, $value);
-        }
-
-        public function setFunctionAs($key, $_function, $as)
-        {
-            return $this->_connector->setFunctionAs($key, $_function, $as);
-        }
-
-        public function pushOperator($mode)
-        {
-            return $this->_connector->pushOperator($mode);
-        }
-
-        public function setOperator($key, $operator, $v1Value = null, $v2Value = null, $v1IsKey = false, $v2IsKey = false)
-        {
-            return $this->_connector->setOperator($key, $operator, $v1Value, $v2Value, $v1IsKey, $v2IsKey);
-        }
-
+        $this->__connector = $connection->connectQuery($this);     
     }
+
+    public static function descriptor($info)
+    {
+    }
+
+    public function isEmpty($key)
+    {
+        return ($this->$key instanceof EmptyField);
+    }
+
+    public function empty()
+    {
+        $this->__connector->empty();
+    }
+
+    public function count()
+    {
+        return $this->__connector->count();
+    }
+
+    public function load($start = null, $length = null)
+    {
+        return $this->__connector->load($start, $length);
+    }
+
+    public function tryLoad($start = null, $length = null)
+    {
+        return $this->__connector->tryLoad($start, $length);
+    }
+
+    public function loadIsValid()
+    {
+        return $this->__connector->loadIsValid();
+    }
+
+    public function loadHasNext()
+    {
+        return $this->__connector->loadHasNext();
+    }
+
+    public function loadNext()
+    {
+        return $this->__connector->loadNext();
+    }
+
+    public function clear($key = false)
+    {
+        return $this->__connector->clear($key);
+    }
+
+    public function setOrder($key, $value)
+    {
+        return $this->__connector->setOrder($key, $value);
+    }
+
+    public function setGroup($key, $value)
+    {
+        return $this->__connector->setGroup($key, $value);
+    }
+
+    public function setFunctionAs($key, $_function, $as)
+    {
+        return $this->__connector->setFunctionAs($key, $_function, $as);
+    }
+
+    public function pushOperator($mode)
+    {
+        return $this->__connector->pushOperator($mode);
+    }
+
+    public function setOperator($key, $operator, $v1Value = null, $v2Value = null, $v1IsKey = false, $v2IsKey = false)
+    {
+        return $this->__connector->setOperator($key, $operator, $v1Value, $v2Value, $v1IsKey, $v2IsKey);
+    }
+
 }

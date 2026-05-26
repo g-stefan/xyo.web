@@ -1,220 +1,228 @@
 <?php
+
 // XYO.Web
-// Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// MIT License (MIT) <http://opensource.org/licenses/MIT>
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web {
-    defined("XYO_WEB") or die("Forbidden");
+namespace XYO\Web;
 
-    require_once ("./_site/xyo/web/info.php");
-    require_once ("./_site/xyo/web/view.php");
-    require_once ("./_site/xyo/web/authorization.php");
+defined("XYO_WEB") or die("Forbidden");
 
-    class Firewall
+require_once(XYO_WEB_PATH . "_site/xyo/web/info.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/view.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/authorization.php");
+
+class Firewall
+{
+    protected $info;
+    protected $view;
+    protected $session;
+    protected $initToken;
+
+    public function __construct($info, $view, $session)
     {
-        private static $instance = null;
-        protected $info;
-        protected $view;
-        protected $clientIP;
+        $this->info = $info;
+        $this->view = $view;
+        $this->initToken = false;
+        $this->session = $session;
+    }
 
-        protected function __construct()
-        {
-            $this->info = \XYO\Web\Info::instance();
-            $this->view = \XYO\Web\View::instance();
-            $this->clientIP = null;
-        }
-
-        public static function instance()
-        {
-            return self::$instance;
-        }
-
-        public static function init()
-        {
-            self::$instance = new Firewall();
-        }
-
-        public function prepare()
-        {
-            // start up session - cookie only
-            ini_set("session.use_cookies", 1);
-            ini_set("session.use_trans_sid", 0);
-            session_start();
-
-            $this->clientIP = $this->getClientIP();
-            $this->cspInit();
-        }
-
-        public function run()
-        {
-            if (!$this->requestCheckMethod()) {
-                return false;
-            }
-
-            $this->info->routeAuthorization->setHeaders();
-            
-            if (strcmp($_SERVER["REQUEST_METHOD"], "OPTIONS") == 0) {
-                return true;
-            }
-
-            if (!$this->info->routeAuthorization->checkBearerToken($this->getBearerToken())) {
-                return false;
-            }
-            
-            if($this->info->routeType != $this->info->routeTypeAPI) {
-                $this->csrfLoad();
-                if ($this->info->routeAuthorization->checkCSRF()) {
-                    if (!$this->csrfCheck()) {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        public function getClientIP()
-        {
-            if (array_key_exists("HTTP_CLIENT_IP", $_SERVER)) {
-                return $_SERVER["HTTP_CLIENT_IP"];
-            }
-            if (array_key_exists("HTTP_X_FORWARDED_FOR", $_SERVER)) {
-                return $_SERVER["HTTP_X_FORWARDED_FOR"];
-            }
-            if (array_key_exists("HTTP_X_FORWARDED", $_SERVER)) {
-                return $_SERVER["HTTP_X_FORWARDED"];
-            }
-            if (array_key_exists("HTTP_FORWARDED_FOR", $_SERVER)) {
-                return $_SERVER["HTTP_FORWARDED_FOR"];
-            }
-            if (array_key_exists("HTTP_FORWARDED", $_SERVER)) {
-                return $_SERVER["HTTP_FORWARDED"];
-            }
-            if (array_key_exists("REMOTE_ADDR", $_SERVER)) {
-                return $_SERVER["REMOTE_ADDR"];
-            }
-            return null;
-        }
-
-        public function cspInit()
-        {
-            if (!array_key_exists("firewall_csp_nonce", $_SESSION)) {
-                $_SESSION["firewall_csp_nonce"] = hash("sha256", $this->clientIP . "." . rand() . "." . time() . session_id() . "CSP_NONCE", false);
-            }
-            $nonce = $_SESSION["firewall_csp_nonce"];
-            $header = "default-src 'self';";
-            $header .= " script-src 'self' 'nonce-" . $nonce . "' 'strict-dynamic';";
-            $header .= " style-src 'self' 'nonce-" . $nonce . "';";
-            $header .= " img-src 'self' blob: data:;";
-            $header .= " font-src 'self';";
-            $header .= " object-src 'none';";
-            $header .= " base-uri 'self';";
-            $header .= " form-action 'self';";
-            $header .= " frame-ancestors 'none';";
-            $header .= " connect-src 'self';";
-            $header .= " upgrade-insecure-requests;";
-
-            header("Content-Security-Policy: " . $header);
-
-            $this->view->nonce = $nonce;
-        }
-
-        public function csrfInit()
-        {
-            $extra = "";
-            if (array_key_exists("firewall_csrf_extra", $_SESSION)) {
-                $extra = $_SESSION["firewall_csrf_extra"];
-            }
-            $tokenCookie = hash("sha256", $this->clientIP . "." . rand() . "." . time() . session_id() . "CSRF_TOKEN_COOKIE" . $extra, false);
-            $tokenPost = hash("sha256", $this->clientIP . "." . rand() . "." . time() . session_id() . "CSRF_TOKEN_COOKIE" . $tokenCookie . $extra, false);
-            $_SESSION["firewall_csrf_token_cookie"] = $tokenCookie;
-            $_SESSION["firewall_csrf_token_post"] = $tokenPost;
-
-            setcookie("_token", $tokenCookie, [
-                "path" => $this->info->sitePath,
-                "httponly" => true,
-                "samesite" => "Strict"
-            ]);
-
-            $this->view->token = $tokenPost;
-        }
-
-        public function csrfLoad()
-        {
-            if (!array_key_exists("firewall_csrf_token_post", $_SESSION)) {
-                $this->csrfInit();
-                return;
-            }
-            $this->view->token = $_SESSION["firewall_csrf_token_post"];
-        }
-
-        public function getAuthorizationHeader()
-        {
-            if (isset($_SERVER["REDIRECT_HTTP_AUTHORIZATION"])) {
-                return trim($_SERVER["REDIRECT_HTTP_AUTHORIZATION"]);
-            }
-            if (isset($_SERVER["HTTP_AUTHORIZATION"])) {
-                return trim($_SERVER["HTTP_AUTHORIZATION"]);
-            }
-            return null;
-        }
-
-        public function getBearerToken()
-        {
-            $header = $this->getAuthorizationHeader();
-            if (!empty($header)) {
-                if (strcmp(substr($header, 0, 7), "Bearer ") == 0) {
-                    return substr($header, 7);
-                }
-            }
-            return null;
-        }
-
-        public function requestCheckMethod()
-        {
-            if (strcmp($_SERVER["REQUEST_METHOD"], "OPTIONS") == 0) {
-                return $this->info->routeAuthorization->checkOPTIONS();
-            }
-            if (strcmp($_SERVER["REQUEST_METHOD"], "GET") == 0) {
-                return $this->info->routeAuthorization->checkGET();
-            }
-            if (strcmp($_SERVER["REQUEST_METHOD"], "POST") == 0) {
-                return $this->info->routeAuthorization->checkPOST();
-            }
+    public function run()
+    {
+        if (!array_key_exists("REQUEST_METHOD", $_SERVER)) {
             return false;
         }
 
-        public function csrfCheck()
-        {
-            if (!array_key_exists("_token", $_POST)) {
-                return false;
-            }
-            if (!array_key_exists("_token", $_COOKIE)) {
-                return false;
-            }
-            if (!array_key_exists("firewall_csrf_token_cookie", $_SESSION)) {
-                return false;
-            }
-            if (!array_key_exists("firewall_csrf_token_post", $_SESSION)) {
-                return false;
-            }
-            if (strlen($_COOKIE["_token"]) == 0) {
-                return false;
-            }
-            if (strlen($_POST["_token"]) == 0) {
-                return false;
-            }
-            if (!(strcmp($_COOKIE["_token"], $_SESSION["firewall_csrf_token_cookie"]) == 0)) {
-                return false;
-            }
-            if (!(strcmp($_POST["_token"], $_SESSION["firewall_csrf_token_post"]) == 0)) {
-                return false;
-            }
+        if (!$this->requestCheckMethod()) {
+            return false;
+        }
+
+        $this->info->authorization->setHeaders();
+
+        if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
             return true;
         }
 
-    }
-}
+        if (!$this->info->authorization->checkBearerToken($this->getBearerToken())) {
+            return false;
+        }
 
+        if ($this->info->routeType == $this->info->routeTypeAPI) {
+            return true;
+        }
+
+        $this->initToken();
+
+        if ($this->info->authorization->checkCSRF()) {
+            if (!$this->csrfCheck()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function initToken()
+    {
+        if ($this->initToken) {
+            return;
+        }
+
+        ini_set("session.use_cookies", 1);
+        ini_set("session.use_trans_sid", 0);
+        ini_set("session.cookie_httponly", 1);
+        ini_set("session.cookie_samesite", "strict");
+        ini_set("session.cookie_secure", !empty($_SERVER["HTTPS"]));
+        session_start();
+
+        if ($this->info->authorization->requireTokenReset()) {
+            $this->tokenReset();
+        }
+
+        $this->cspInit();
+        $this->csrfLoad();
+
+        $this->initToken = true;
+
+        $this->session->init();
+    }
+
+    public function tokenReset()
+    {
+        session_regenerate_id(true);
+        unset($_SESSION["firewall_csrf_token_post"]);
+        unset($_SESSION["firewall_csrf_token_cookie"]);
+        unset($_SESSION["firewall_csrf_extra"]);
+    }
+
+    public function cspInit()
+    {
+        $nonce = hash("sha256", bin2hex(random_bytes(32)) . "." . time() . session_id() . "CSP_NONCE", false);
+        $header = "default-src 'self';";
+        $header .= " script-src 'self' 'nonce-" . $nonce . "' 'strict-dynamic';";
+        $header .= " style-src 'self' 'nonce-" . $nonce . "';";
+        $header .= " img-src 'self' blob: data:;";
+        $header .= " font-src 'self';";
+        $header .= " object-src 'none';";
+        $header .= " base-uri 'self';";
+        $header .= " form-action 'self';";
+        $header .= " frame-ancestors 'none';";
+        $header .= " connect-src 'self';";
+        $header .= " upgrade-insecure-requests;";
+
+        header("Content-Security-Policy: " . $header);
+        header("X-Content-Type-Options: nosniff");
+        header("Referrer-Policy: strict-origin-when-cross-origin");
+        if (!empty($_SERVER["HTTPS"])) {
+            header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+        }
+
+        $this->view->setNonce($nonce);
+    }
+
+    public function csrfInit()
+    {
+        $extra = "";
+        if (array_key_exists("firewall_csrf_extra", $_SESSION)) {
+            $extra = $_SESSION["firewall_csrf_extra"];
+        }
+        $tokenCookie = hash("sha256", bin2hex(random_bytes(32)) . "." . time() . session_id() . "CSRF_TOKEN_COOKIE" . $extra, false);
+        $tokenPost = hash("sha256", bin2hex(random_bytes(32)) . "." . time() . session_id() . "CSRF_TOKEN_POST" . $tokenCookie . $extra, false);
+        $_SESSION["firewall_csrf_token_cookie"] = $tokenCookie;
+        $_SESSION["firewall_csrf_token_post"] = $tokenPost;
+
+        // Can't use __Host- prefix, the app can be in /app/
+        setcookie("_token", $tokenCookie, [
+            "path" => $this->info->site,
+            "httponly" => true,
+            "samesite" => "Strict",
+            "secure" => !empty($_SERVER["HTTPS"])
+        ]);
+
+        $this->view->token = $tokenPost;
+    }
+
+    public function csrfLoad()
+    {
+        if (!array_key_exists("firewall_csrf_token_post", $_SESSION)) {
+            $this->csrfInit();
+            return;
+        }
+        $this->view->token = $_SESSION["firewall_csrf_token_post"];
+    }
+
+    public function getAuthorizationHeader()
+    {
+        if (isset($_SERVER["REDIRECT_HTTP_AUTHORIZATION"])) {
+            return trim($_SERVER["REDIRECT_HTTP_AUTHORIZATION"]);
+        }
+        if (isset($_SERVER["HTTP_AUTHORIZATION"])) {
+            return trim($_SERVER["HTTP_AUTHORIZATION"]);
+        }
+        return null;
+    }
+
+    public function getBearerToken()
+    {
+        $header = $this->getAuthorizationHeader();
+        if (!empty($header)) {
+            if (substr($header, 0, 7) === "Bearer ") {
+                return substr($header, 7);
+            }
+        }
+        return null;
+    }
+
+    public function requestCheckMethod()
+    {
+        if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
+            return $this->info->authorization->checkOPTIONS();
+        }
+        if ($_SERVER["REQUEST_METHOD"] === "GET") {
+            return $this->info->authorization->checkGET();
+        }
+        if ($_SERVER["REQUEST_METHOD"] === "POST") {
+            return $this->info->authorization->checkPOST();
+        }
+        if ($_SERVER["REQUEST_METHOD"] === "PUT") {
+            return $this->info->authorization->checkPUT();
+        }
+        if ($_SERVER["REQUEST_METHOD"] === "PATCH") {
+            return $this->info->authorization->checkPATCH();
+        }
+        if ($_SERVER["REQUEST_METHOD"] === "DELETE") {
+            return $this->info->authorization->checkDELETE();
+        }
+        return false;
+    }
+
+    public function csrfCheck()
+    {
+        if (!array_key_exists("_token", $_POST)) {
+            return false;
+        }
+        if (!array_key_exists("_token", $_COOKIE)) {
+            return false;
+        }
+        if (!array_key_exists("firewall_csrf_token_cookie", $_SESSION)) {
+            return false;
+        }
+        if (!array_key_exists("firewall_csrf_token_post", $_SESSION)) {
+            return false;
+        }
+        if (strlen($_COOKIE["_token"]) == 0) {
+            return false;
+        }
+        if (strlen($_POST["_token"]) == 0) {
+            return false;
+        }
+        if (!hash_equals($_COOKIE["_token"], $_SESSION["firewall_csrf_token_cookie"])) {
+            return false;
+        }
+        if (!hash_equals($_POST["_token"], $_SESSION["firewall_csrf_token_post"])) {
+            return false;
+        }
+        return true;
+    }
+
+}

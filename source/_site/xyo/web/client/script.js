@@ -1,9 +1,7 @@
 /*!
 // XYO.Web
-// Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// MIT License (MIT) <http://opensource.org/licenses/MIT>
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 */
 
 XYO.Web.Script = {};
@@ -15,11 +13,14 @@ XYO.Web.Script = {};
  * @param {string} el - attach script as child of el
  */
 XYO.Web.Script.run = function (script, nonce, el) {
-	el=el?el:document.body;
+	el = el ? el : document.body;
 	var elScript = document.createElement("script");
 	elScript.textContent = script;
 	if (nonce) {
 		elScript.setAttribute("nonce", nonce);
 	};
 	el.appendChild(elScript);
+	setTimeout(function () {
+		el.removeChild(elScript);
+	}, 15000);
 };

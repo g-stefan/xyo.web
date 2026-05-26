@@ -19,6 +19,8 @@ Shell.remove("output/_site/xyo/web/release/web.header.js");
 exitIf(Shell.system("xyo-version --no-bump --project=xyo.web --version-file=version.json --file-in=source/_site/xyo/web/release/web.header.js --file-out=output/_site/xyo/web/release/web.header.js"));
 Shell.remove("output/_site/xyo/web/release/web.header.php");
 exitIf(Shell.system("xyo-version --no-bump --project=xyo.web --version-file=version.json --file-in=source/_site/xyo/web/release/web.header.php --file-out=output/_site/xyo/web/release/web.header.php"));
+Shell.remove("output/_site/xyo/web/release/web.guard.php");
+exitIf(Shell.system("xyo-version --no-bump --project=xyo.web --version-file=version.json --file-in=source/_site/xyo/web/release/web.guard.php --file-out=output/_site/xyo/web/release/web.guard.php"));
 
 // ---
 

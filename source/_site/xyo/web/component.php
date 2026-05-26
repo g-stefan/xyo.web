@@ -1,39 +1,33 @@
 <?php
+
 // XYO.Web
-// Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// MIT License (MIT) <http://opensource.org/licenses/MIT>
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web {
+namespace XYO\Web;
 
-    defined("XYO_WEB") or die("Forbidden");
+defined("XYO_WEB") or die("Forbidden");
 
-    require_once("./_site/xyo/web/module.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/module.php");
 
-    class Component extends Module
+class Component extends Module
+{    
+    public static function register($render, $id = null, $options = null)
     {
-        public static function &register(&$render, $id = null, $options = null)
-        {
-            return $render->registerComponent(static::class, $id, $options);
-        }
+        return $render->registerComponent(static::class, $id, $options);
+    }
 
-        public static function &registerAndInit(&$render, $id = null, $options = null)
-        {
-            return $render->registerAndInitComponent(static::class, $id, $options);
-        }
+    public static function registerAndInit($render, $id = null, $options = null)
+    {
+        return $render->registerAndInitComponent(static::class, $id, $options);
+    }
 
-        public function renderAJAX($options = null)
-        {
-        }
+    public function renderAJAX($options = null) {}
 
-        public function renderContainer($options = null)
-        {
-        }
+    public function renderContainer($options = null) {}
 
-        public function render($options = null)
-        {
-            ($this->isComponentAJAX()) ? $this->renderAJAX($options) : $this->renderContainer($options);
-        }
+    public function render($options = null)
+    {
+        ($this->isComponentAJAX()) ? $this->renderAJAX($options) : $this->renderContainer($options);
     }
 }

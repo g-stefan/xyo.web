@@ -1,30 +1,29 @@
 <?php
 // XYO.Web
-// Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// MIT License (MIT) <http://opensource.org/licenses/MIT>
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web\_Default {
-    defined("XYO_WEB") or die("Forbidden");
+namespace XYO\Web\_Default;
 
-    require_once ("./_site/xyo/web/web.php");
-    require_once ("./_site/xyo/web/library/xyo-web-logo.php");
-    use \XYO\Web\Library\XYOWebLogo;
+defined("XYO_WEB") or die("Forbidden");
 
-    class HTTP404 extends \XYO\Web\Page
+require_once(XYO_WEB_PATH . "_site/xyo/web/web.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/library/xyo-web-logo.php");
+use XYO\Web\Library\XYOWebLogo;
+
+class HTTP404 extends \XYO\Web\Page
+{
+    public function init($options = null)
     {
-        public function init($options = null)
-        {
-            http_response_code(404);
+        http_response_code(404);
 
-            $this->setTitle("404 Not Found");
+        $this->setTitle("404 Not Found");
 
-            XYOWebLogo::register($this, "logo");
-        }
+        XYOWebLogo::register($this, "logo");
+    }
 
-        public function render($options = null)
-        { ?>
+    public function render($options = null)
+    { ?>
             <div class="relative flex min-h-screen flex-col justify-center overflow-hidden bg-stone-300 py-6 sm:py-12">
                 <div
                     class="relative bg-white px-6 pb-8 pt-10 shadow-xl ring-1 ring-gray-900/5 sm:mx-auto sm:max-w-lg sm:rounded-lg sm:px-10">
@@ -45,5 +44,4 @@ namespace XYO\Web\_Default {
         <?php }
     }
 
-    return HTTP404::class;
-}
+return HTTP404::class;

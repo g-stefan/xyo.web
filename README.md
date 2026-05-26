@@ -1,11 +1,11 @@
-# xyo.web
+# XYO.Web
 
 PHP framework for web application
 
 ## License
 
 Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-Licensed under the [MIT](LICENSE) license.
+Licensed under the [Apache-2.0](LICENSE) license.
 
 **This is a compilation of different works.**
 Some files are under other licenses and carry additional requirements and copyright information.

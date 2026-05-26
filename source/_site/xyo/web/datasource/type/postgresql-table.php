@@ -1,962 +1,396 @@
 <?php
+
 // XYO.Web
-// Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// MIT License (MIT) <http://opensource.org/licenses/MIT>
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web\DataSource\Type\PostgreSQL {
+namespace XYO\Web\DataSource\Type\PostgreSQL;
 
-    defined("XYO_WEB") or die("Forbidden");
+defined("XYO_WEB") or die("Forbidden");
 
-    class Table
+// This is part of optimized PostgreSQL Driver
+
+require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/abstract-sql-table.php");
+
+class Table extends \XYO\Web\DataSource\Type\AbstractSQLTable
+{
+    protected function quoteIdentifier($name)
     {
+        return "\"" . str_replace("\"", "\"\"", $name) . "\"";
+    }
 
-        protected $connection = null;
-        protected $table = null;
-        protected $info = null;
-        protected $name = null;
-        protected $operator = null;
-        protected $order = null;
-        protected $_order = null;
+    protected function limitClause($start, $length)
+    {
+        $start = max(0, intval($start));
+        if ($length) {
+            $length = max(0, intval($length));
+            return " LIMIT " . $length . " OFFSET " . $start;
+        }
+        return " LIMIT " . $start;
+    }
 
-        protected $_select = null;
+    protected function autoIncrementType()
+    {
+        return "SERIAL";
+    }
 
-        protected $_function = null;
-        protected $group = null;
+    protected function lastInsertIdQuery()
+    {
+        return "SELECT CURRVAL(pg_get_serial_sequence('" . $this->name . "','" . $this->autoIncrement . "'));";
+    }
 
-        protected $result = null;
-        protected $nextFields = null;
-        protected $autoIncrement = null;
-        protected $_loadIsValid = false;
-        public function __construct(&$connection, &$table)
-        {
-            $this->connection = $connection;
-            $this->table = $table;
-            $this->info = &$table->_class::$_registry[$table->_class];
-            $this->name = $this->connection->getPrefix() . $this->info->name;
-            $this->_order = &$table->_class::$_order;
-            $this->operator = array();
-            $this->_select = array();
-            $this->_function = array();
-            $this->group = array();
-            $this->order = array();
-            $this->autoIncrement = null;
+    // The PostgreSQL type the descriptor field maps onto (without constraints).
+    protected function pgType($value)
+    {
+        $type = strtolower($value[0]);
+        if ($type === "varchar") {
+            return "VARCHAR" . ((count($value) > 2) ? "(" . intval($value[2]) . ")" : "");
+        }
+        if ($type === "int") {
+            return "INTEGER";
+        }
+        if ($type === "bigint") {
+            return "BIGINT";
+        }
+        if ($type === "datetime") {
+            return "TIMESTAMP";
+        }
+        return strtoupper($type);
+    }
 
-            $this->result = null;
-            $this->nextFields = null;
-            $this->_loadIsValid = false;
+    // The DDL fragment for one column, without a leading comma and without the
+    // PRIMARY KEY clause (declared separately). Shared by createStorage() and
+    // storageUpdateTable() (ADD COLUMN).
+    protected function buildColumnDefinition($key, $value)
+    {
+        // Auto-increment integer keys use SERIAL/BIGSERIAL, which already imply
+        // NOT NULL plus a sequence-backed default — no extra constraints.
+        if ((count($value) > 3) && ($value[3] === "autoIncrement")) {
+            $serial = ($value[0] === "bigint") ? "BIGSERIAL" : "SERIAL";
+            return $this->quoteIdentifier($key) . " " . $serial;
+        }
 
-            foreach ($this->info->fields as $key => &$value) {
-                if (count($value) > 3) {
-                    if ($value[3] == "autoIncrement") {
-                        $this->autoIncrement = $key;
-                    }
+        if ($value[0] === "varchar") {
+            $def = $this->quoteIdentifier($key) . " VARCHAR";
+            if (count($value) > 2) {
+                $def .= "(" . intval($value[2]) . ")";
+            }
+            if (count($value) > 1) {
+                if (!is_null($value[1])) {
+                    $def .= " DEFAULT '" . addcslashes($value[1], "'\\") . "'";
                 }
             }
-
+            return $def;
         }
 
-        public function setOrder($key, $value)
-        {
-            if (array_key_exists($key, $this->info->fields)) {
-                $this->order[$key] = $value;
+        if ($value[0] === "datetime") {
+            $def = $this->quoteIdentifier($key) . " TIMESTAMP";
+            if ((count($value) > 1) && !(is_null($value[1]) || ($value[1] === "DEFAULT"))) {
+                $def .= " DEFAULT '" . addcslashes($value[1], "'\\") . "'";
             }
+            return $def;
         }
 
-        public function setGroup($key, $value)
-        {
-            if (array_key_exists($key, $this->info->fields)) {
-                $this->group[$key] = $value;
-            }
+        $def = $this->quoteIdentifier($key) . " " . strtoupper($value[0]);
+        if ((count($value) > 2) && !is_null($value[2])) {
+            $def .= " " . strtoupper($value[2]);
         }
-
-        public function setFunctionAs($key, $_function, $as)
-        {
-            if (array_key_exists($key, $this->info->fields)) {
-                $this->_function[$key] = array($_function, $as);
-            }
+        if (($value[0] === "int") || ($value[0] === "bigint")) {
+            $def .= " NOT NULL";
         }
-
-        public function pushOperator($mode)
-        {
-            $opList1 = array(
-                "and" => " AND ",
-                "or" => " OR "
-            );
-
-            $opList2 = array(
-                "(" => "(",
-                ")" => ")"
-            );
-
-            if (array_key_exists($mode, $opList1)) {
-                $idx = count($this->operator);
-                if ($idx) {
-                    if (in_array($this->operator[$idx - 1][1], $opList1)) {
-                        $idx = $idx - 1;
-                    }
-                }
-                $this->operator[$idx] = array(0 => 1, 1 => $opList1[$mode]);
-                return;
-            }
-            if (array_key_exists($mode, $opList2)) {
-                $idx = count($this->operator);
-                if ($idx) {
-                    if (in_array($this->operator[$idx - 1][1], $opList2)) {
-                        if ($this->operator[$idx - 1][1] == "(" && $opList2[$mode] == ")") {
-                            unset($this->operator[$idx - 1]);
-                            return;
-                        }
-                    }
-                }
-                $this->operator[$idx] = array(0 => 1, 1 => $opList2[$mode]);
-            }
-        }
-
-        public function setOperator($key, $operator, $v1 = null, $v2 = null, $v1x = false, $v2x = false)
-        {
-            if (!array_key_exists($key, $this->info->fields)) {
-                return;
-            }
-
-            $idx = count($this->operator);
-            if ($idx) {
-                if ($this->operator[$idx - 1][0] == 0) {
-                    $idx = $idx - 1;
-                }
-            } else {
-                $this->pushOperator("and");
-                $idx = count($this->operator);
-            }
-
-            $opList = array(
-                "between" => array(2, " BETWEEN "),
-                "not-between" => array(2, " NOT BETWEEN "),
-                "is-null" => array(0, " IS NULL "),
-                "is-not-null" => array(0, " IS NOT NULL "),
-                "=" => array(1, " = "),
-                "<" => array(1, " < "),
-                ">" => array(1, " > "),
-                "<=" => array(1, " <= "),
-                ">=" => array(1, " >= "),
-                "!=" => array(1, " != "),
-                "like" => array(3, " LIKE ")
-            );
-            if (array_key_exists($operator, $opList)) {
-                $this->operator[$idx] = array(0 => 0, 1 => $key, 2 => $opList[$operator][0], 3 => $opList[$operator][1], 4 => $v1, 5 => $v2, 6 => $v1x, 7 => $v2x);
-            }
-        }
-
-        function strQueryValue($key, $value)
-        {
-            return $this->connection->safeTypeValue($this->info->fields[$key][0], $value);
-        }
-
-        function strQueryWhereClauseForFieldValue($fieldAs, $fieldThis, $value)
-        {
-            return "\"" . $fieldAs . "\"=" . $this->strQueryValue($fieldThis, $value);
-        }
-
-        function strQueryWhereClauseForField($fieldAs, $fieldThis)
-        {
-            $value = $this->table->$fieldThis;
-            if (is_array($value)) {
-                if (count($value) == 1) {
-                    $value = $value[0];
+        if (count($value) > 1) {
+            if (!(is_null($value[1]) || ($value[1] === "DEFAULT"))) {
+                if (is_int($value[1])) {
+                    $def .= " DEFAULT " . $value[1];
                 } else {
-                    $where = "(";
-
-                    $x = null;
-                    foreach ($value as $v) {
-                        if ($x) {
-                            $x .= " OR " . $this->strQueryWhereClauseForFieldValue($fieldAs, $fieldThis, $v);
-                        } else {
-                            $x = $this->strQueryWhereClauseForFieldValue($fieldAs, $fieldThis, $v);
-                        }
-                    }
-
-                    $where .= $x;
-                    $where .= ")";
-                    return $where;
+                    $def .= " DEFAULT '" . addcslashes($value[1], "'\\") . "'";
                 }
             }
-
-            return $this->strQueryWhereClauseForFieldValue($fieldAs, $fieldThis, $value);
         }
 
-        function strWhereQuery()
-        {
-            $where = null;
-            foreach ($this->info->fields as $key => $value) {
-                if ($this->table->isEmpty($key)) {
-                    continue;
-                }
-                if ($where) {
-                    $where .= " AND " . $this->strQueryWhereClauseForField($key, $key);
-                } else {
-                    $where = " WHERE " . $this->strQueryWhereClauseForField($key, $key);
-                }
-            }
-
-            if (count($this->operator)) {
-                foreach ($this->operator as $key => $value) {
-                    if ($value[0] == 1) {
-
-                        if ($where) {
-                            $where .= $value[1];
-                        } else {
-                            $where = " WHERE ";
-                        }
-
-                    } else {
-
-                        if ($value[2] == 3) {
-                            if (is_array($value[4])) {
-                                $where .= "(";
-                            }
-                        }
-
-                        if ($value[2] == 1) {
-                            if ($value[7]) {
-                                $where .= "COALESCE(";
-                            }
-                        }
-
-                        $where .= "\"" . $value[1] . "\"";
-                        if ($value[2] == 1) {
-                            if ($value[7]) {
-                                $where .= "," . $this->strQueryValue($value[1], $value[5]) . ")";
-                            }
-                        }
-
-                        $where .= $value[3];
-
-                        if ($value[2] == 0) {
-                        } else if ($value[2] == 1) {
-                            if ($value[6]) {
-                                $where .= "\"" . $value[4] . "\"";
-                            } else {
-                                $where .= $this->strQueryValue($value[1], $value[4]);
-                            }
-                        } else if ($value[2] == 2) {
-                            if ($value[6]) {
-                                $where .= "\"" . $value[4] . "\"";
-                            } else {
-                                $where .= $this->strQueryValue($value[1], $value[4]);
-                            }
-
-                            $where .= " AND ";
-
-                            if ($value[7]) {
-                                $where .= "\"" . $value[5] . "\"";
-                            } else {
-                                $where .= $this->strQueryValue($value[1], $value[5]);
-                            }
-                        } else if ($value[2] == 3) {
-                            if (is_array($value[4])) {
-                                $idx = 0;
-                                $cnt = count($value[4]);
-                                foreach ($value[4] as $valueX_) {
-                                    if ($value[6]) {
-                                        $where .= "\"" . $valueX_ . "\"";
-                                    } else {
-                                        $where .= "\"%" . $this->connection->safeLikeValue($valueX_) . "%\"";
-                                    }
-                                    ++$idx;
-                                    if ($idx < $cnt) {
-                                        $where .= " OR \"" . $value[1] . "\" LIKE ";
-                                    }
-                                }
-                            } else {
-                                if ($value[6]) {
-                                    $where .= "\"" . $value[4] . "\"";
-                                } else {
-                                    $where .= "\"%" . $this->connection->safeLikeValue($value[4]) . "%\"";
-                                }
-                            }
-                        }
-
-
-                        if ($value[2] == 3) {
-                            if (is_array($value[4])) {
-                                $where .= ")";
-                            }
-                        }
-
-                    }
-                }
-            }
-
-            return $where;
-        }
-
-        function strSelectQuery($query = false, $inCount = false)
-        {
-
-            if ($query == false) {
-
-                if (count($this->_select)) {
-                    foreach ($this->_select as $key) {
-                        if ($query) {
-                            $query .= ",\"" . $key . "\"";
-                        } else {
-                            $query = "SELECT \"" . $key . "\"";
-                        }
-                    }
-                } else {
-                    foreach ($this->info->fields as $key => &$value) {
-                        if ($query) {
-                            $query .= ",\"" . $key . "\"";
-                        } else {
-                            $query = "SELECT \"" . $key . "\"";
-                        }
-                    }
-                }
-
-                foreach ($this->_function as $key => &$value) {
-                    $query .= "," . $value[0] . "(\"" . $key . "\") AS \"" . $value[1] . "\"";
-                }
-            }
-
-            $query .= " FROM \"" . $this->name . "\"";
-
-            $query .= $this->strWhereQuery();
-
-            $group = false;
-            foreach ($this->group as $key => $value) {
-                if ($value) {
-                    if ($group) {
-                        $group .= ",\"" . $key . "\"";
-                    } else {
-                        $group = "GROUP BY \"" . $key . "\"";
-                    }
-                }
-            }
-
-            if ($group) {
-                $query .= " " . $group;
-            }
-
-            if (!$inCount) {
-                $order = false;
-                foreach ($this->order as $key => $value) {
-                    if ($value) {
-                        if ($order) {
-                            $order .= ",\"" . $key . "\"";
-                        } else {
-                            $order = "ORDER BY \"" . $key . "\"";
-                        }
-
-                        if ($value == $this->_order->ascendent) {
-                            $order .= " ASC";
-                        } else if ($value == $this->_order->descendent) {
-                            $order .= " DESC";
-                        }
-                    }
-                }
-
-                if ($order) {
-                    $query .= " " . $order;
-                }
-            }
-
-            return $query;
-        }
-
-        function strQueryCode($start = null, $length = null)
-        {
-            if (!is_null($this->info->primaryKey)) {
-                if (is_null($this->table->{$this->info->primaryKey})) {
-                    if (
-                        ($this->info->fields[$this->info->primaryKey][0] === "int") ||
-                        ($this->info->fields[$this->info->primaryKey][0] === "bigint")
-                    ) {
-                        $this->table->{$this->info->primaryKey} = $this->table->_empty;
-                    }
-                }
-            }
-            $query = $this->strSelectQuery();
-            if (isset($start)) {
-                $query .= " LIMIT " . $start;
-
-                if ($length) {
-                    $query .= "," . $length;
-                }
-            }
-            $query .= ";";
-            return $query;
-        }
-
-        function tryLoadCode($query)
-        {
-            $this->_loadIsValid = false;
-            $this->result = $this->connection->query($query);
-            if ($this->result) {
-                $fields = $this->result->fetch_assoc();
-                if ($fields) {
-                    $this->table->empty();
-                    foreach ($fields as $key => $value) {
-                        $this->table->$key = $value;
-                    }
-                    $this->_loadIsValid = true;
-                    return true;
-                }
-            }
-            $this->result = null;
-        }
-
-        function loadCode($query)
-        {
-            $this->_loadIsValid = false;
-            $this->table->empty();
-            $this->result = $this->connection->query($query);
-            if ($this->result) {
-                $fields = $this->result->fetch_assoc();
-                if ($fields) {
-                    foreach ($fields as $key => $value) {
-                        $this->table->$key = $value;
-                    }
-                    $this->_loadIsValid = true;
-                    return true;
-                }
-            }
-            $this->result = null;
-            return false;
-        }
-
-        public function load($start = null, $length = null)
-        {
-            return $this->loadCode($this->strQueryCode($start, $length));
-        }
-
-        public function tryLoad($start = null, $length = null)
-        {
-            return $this->tryLoadCode($this->strQueryCode($start, $length));
-        }
-
-        public function loadIsValid()
-        {
-            return $this->_loadIsValid;
-        }
-
-        public function count()
-        {
-            $query = $this->strSelectQuery("SELECT COUNT(*)", true);
-            return $this->connection->queryValue($query, 0);
-        }
-
-        public function loadHasNext()
-        {
-            if ($this->result) {
-                $this->nextFields = $this->result->fetch_assoc();
-                if ($this->nextFields) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public function loadNext()
-        {
-            $this->_loadIsValid = false;
-            $this->table->empty();
-            if ($this->nextFields) {
-                foreach ($this->nextFields as $key => $value) {
-                    $this->table->$key = $value;
-                }
-                $this->nextFields = null;
-                $this->_loadIsValid = true;
-                return true;
-            }
-            if ($this->result) {
-                $fields = $this->result->fetch_assoc();
-                if ($fields) {
-                    foreach ($fields as $key => $value) {
-                        $this->table->$key = $value;
-                    }
-                    $this->_loadIsValid = true;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public function clear($key = false)
-        {
-            if ($key) {
-                if (array_key_exists($key, $this->info->fields)) {
-                    $this->table->$key = $this->table->_empty;
-                }
-                if (array_key_exists($key, $this->group)) {
-                    unset($this->group[$key]);
-                }
-                if (array_key_exists($key, $this->order)) {
-                    unset($this->order[$key]);
-                }
-                if (array_key_exists($key, $this->_function)) {
-                    unset($this->_function[$key]);
-                }
-                return;
-            }
-            $this->table->empty();
-            $this->_loadIsValid = false;
-            $this->group = array();
-            $this->order = array();
-            $this->_function = array();
-            $this->operator = array();
-            $this->_select = array();
-        }
-
-        public function insert()
-        {
-            $query = false;
-            $queryV = false;
-            foreach ($this->info->fields as $key => $value) {
-                $value = $this->table->$key;
-                if (is_array($value)) {
-                    $value = null;
-                }
-                if ($this->table->isEmpty($key)) {
-                    $value = $this->info->fields[$key][1];
-                }
-
-                if ($query) {
-                    $query .= ",\"" . $key . "\"";
-                } else {
-                    $query = "INSERT INTO \"" . $this->name . "\" (\"" . $key . "\"";
-                }
-
-                if ($queryV) {
-                    $queryV .= "," . $this->strQueryValue($key, $value);
-                } else {
-                    $queryV = "VALUES (" . $this->strQueryValue($key, $value);
-                }
-
-            }
-            $query .= ") " . $queryV . ");";
-
-            $result = $this->connection->query($query);
-            if ($result) {
-                if ($this->autoIncrement) {
-                    $query = "SELECT CURRVAL(pg_get_serial_sequence(\"" . $this->name . "\",\"" . $this->autoIncrement . "\"));";
-                    $this->table->{$this->autoIncrement} = $this->connection->queryValue($query, null);
-                }
-                return true;
-            }
-            return false;
-        }
-
-        public function save()
-        {
-
-            if ($this->info->primaryKey) {
-
-                $tablePrimaryKeyValue = $this->table->{$this->info->primaryKey};
-                if (is_array($tablePrimaryKeyValue)) {
-                    $tablePrimaryKeyValue = null;
-                }
-
-                if ($tablePrimaryKeyValue === $this->info->fields[$this->info->primaryKey][1]) {
-                    $tablePrimaryKeyValue = null;
-                }
-
-                if ($this->table->isEmpty($this->info->primaryKey)) {
-                    $tablePrimaryKeyValue = null;
-                }
-
-                if ($tablePrimaryKeyValue) {
-
-                    $query = false;
-
-                    foreach ($this->info->fields as $key => $value) {
-                        if (is_array($this->table->$key)) {
-                            continue;
-                        }
-                        if ($this->table->isEmpty($key)) {
-                            continue;
-                        }
-
-                        if ($query) {
-                            $query .= ",\"" . $key . "\"=" . $this->strQueryValue($key, $this->table->$key);
-                        } else {
-                            $query = "UPDATE \"" . $this->name . "\" SET \"" . $key . "\"=" . $this->strQueryValue($key, $this->table->$key);
-                        }
-                    }
-
-                    $query .= " WHERE \"" . $this->info->primaryKey . "\"=" . $this->strQueryValue($this->info->primaryKey, $tablePrimaryKeyValue) . ";";
-
-
-                    $result = $this->connection->query($query);
-                    if ($result) {
-                        return true;
-                    }
-                    return false;
-                }
-            }
-            return $this->insert();
-        }
-
-        public function delete()
-        {
-            $query = false;
-
-            if ($this->info->primaryKey) {
-                if (!$this->table->isEmpty($this->info->primaryKey)) {
-                    $query = "DELETE FROM \"" . $this->name . "\" WHERE " . $this->strQueryWhereClauseForField($this->info->primaryKey, $this->info->primaryKey) . ";";
-                    $result = $this->connection->query($query);
-                    if ($result) {
-                        return true;
-                    }
-                    return false;
-                }
-            }
-
-            foreach ($this->info->fields as $key => $value) {
-                if ($this->table->isEmpty($key)) {
-                    continue;
-                }
-                if ($query) {
-                    $query .= " AND " . $this->strQueryWhereClauseForField($key, $key);
-                } else {
-                    $query = "DELETE FROM \"" . $this->name . "\" WHERE " . $this->strQueryWhereClauseForField($key, $key);
-                }
-            }
-
-            $query .= ";";
-            $result = $this->connection->queryDirect($query);
-            if ($result) {
-                return true;
-            }
-            return false;
-        }
-
-        public function update($what = array())
-        {
-            if (count($what)) {
-
-                $query = false;
-                foreach ($what as $key => $value) {
-                    if (is_array($value)) {
-                        continue;
-                    }
-                    if ($value instanceof EmptyField) {
-                        continue;
-                    }
-
-                    if ($query) {
-                        $query .= ",\"" . $key . "\"=" . $this->strQueryValue($key, $value);
-                    } else {
-                        $query = "UPDATE \"" . $this->name . "\" SET \"" . $key . "\"=" . $this->strQueryValue($key, $value);
-                    }
-
-                }
-
-                $query .= $this->strWhereQuery();
-
-                $result = $this->connection->query($query);
-                if ($result) {
-                    return true;
-                }
-
-            }
-            return false;
-        }
-
-        public function select($what = array())
-        {
-            $this->_select = $what;
-        }
-
-        public function atomicAdd($field, $value)
-        {
-
-            if ($this->info->primaryKey) {
-
-                $tablePrimaryKeyValue = $this->table->{$this->info->primaryKey};
-                if (is_array($tablePrimaryKeyValue)) {
-                    $tablePrimaryKeyValue = null;
-                }
-                if ($tablePrimaryKeyValue === $this->info->fields[$this->info->primaryKey][1]) {
-                    $tablePrimaryKeyValue = null;
-                }
-                if ($this->table->isEmpty($this->info->primaryKey)) {
-                    $tablePrimaryKeyValue = null;
-                }
-
-                if ($tablePrimaryKeyValue) {
-
-                    $query = "BEGIN;";
-                    $query .= "SELECT \"" . $field . "\" FROM \"" . $this->name . "\" WHERE \"" . $this->info->primaryKey . "\" = " . $tablePrimaryKeyValue . " FOR UPDATE;";
-                    $query .= "UPDATE \"" . $this->name . "\" SET \"" . $field . "\" = \"" . $field . "\"+" . $value . " WHERE \"" . $this->info->primaryKey . "\" = " . $tablePrimaryKeyValue . ";";
-                    $query .= "COMMIT;";
-
-                    $result = $this->connection->multiQuery($query);
-                    if ($result) {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        public function atomicIncrement($field)
-        {
-            return $this->atomicAdd($field, 1);
-        }
-
-        public function atomicSub($field, $value)
-        {
-
-            if ($this->info->primaryKey) {
-
-                $tablePrimaryKeyValue = $this->table->{$this->info->primaryKey};
-                if (is_array($tablePrimaryKeyValue)) {
-                    $tablePrimaryKeyValue = null;
-                }
-                if ($tablePrimaryKeyValue === $this->info->fields[$this->info->primaryKey][1]) {
-                    $tablePrimaryKeyValue = null;
-                }
-                if ($this->table->isEmpty($this->info->primaryKey)) {
-                    $tablePrimaryKeyValue = null;
-                }
-
-                if ($tablePrimaryKeyValue) {
-
-                    $query = "BEGIN;";
-                    $query .= "SELECT \"" . $field . "\" FROM \"" . $this->name . "\" WHERE \"" . $this->info->primaryKey . "\" = " . $tablePrimaryKeyValue . " FOR UPDATE;";
-                    $query .= "UPDATE \"" . $this->name . "\" SET \"" . $field . "\" = \"" . $field . "\"-" . $value . " WHERE \"" . $this->info->primaryKey . "\" = " . $tablePrimaryKeyValue . ";";
-                    $query .= "COMMIT;";
-
-                    $result = $this->connection->multiQuery($query);
-                    if ($result) {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        public function destroyStorage()
-        {
-            $query = "DROP TABLE IF EXISTS \"" . $this->name . "\";";
-            $result = $this->connection->query($query);
-            if ($result) {
-                return true;
-            }
-            return false;
-        }
-
-        public function createStorage()
-        {
-            $query = "SELECT \"table_name\" FROM \"information_schema\".\"tables\" WHERE \"table_name\"=\"" . $this->name . "\";";
-            $result = $this->connection->query($query);
-            if ($result) {
-                return true;
-            }
-
-            $before = false;
-            $query = "CREATE TABLE \"" . $this->name . "\" (";
-            foreach ($this->info->fields as $key => $value) {
-
-                if ($before) {
-                    $query .= ",";
-                } else {
-                    $before = true;
-                }
-
-                $isPk = false;
-                if ($this->info->primaryKey) {
-                    if ($this->info->primaryKey == $key) {
-                        $isPk = true;
-                    }
-                }
-
-                if ($isPk) {
-                    $query .= "\"" . $key . "\"";
-                } else {
-                    if ($value[0] == "datetime") {
-                        $query .= "\"" . $key . "\" TIMESTAMP";
-                    } else {
-                        $query .= "\"" . $key . "\" " . strtoupper($value[0]);
-                    }
-                }
-
-                if ($value[0] == "varchar") {
-                    if (count($value) > 2) {
-                        $query .= "(" . strtoupper($value[2]) . ")";
-                    }
-                    if (count($value) > 1) {
-                        if (!is_null($value[1])) {
-                            $query .= " DEFAULT \"" . $value[1] . "\"";
-                        }
-                    }
-                    continue;
-                }
-
-                if ($value[0] == "datetime") {
-                    $query .= "\"" . $key . "\" TIMESTAMP";
-                }
-
-                if (count($value) > 2) {
-                    $query .= " " . strtoupper($value[2]);
-                }
-                if (($value[0] == "int") || ($value[0] == "bigint")) {
-                    $query .= " NOT NULL";
-                }
-                if (count($value) > 3) {
-                    if ($value[3] == "autoIncrement") {
-                        $query .= " SERIAL";
-                    } else {
-                        $query .= " " . strtoupper($value[3]);
-                    }
-                }
-
-                if (count($value) > 1) {
-                    if (!(is_null($value[1]) || (strcmp($value[1], "DEFAULT") == 0))) {
-                        if (is_int($value[1])) {
-                            $query .= " DEFAULT " . $value[1];
-                        } else {
-                            $query .= " DEFAULT \"" . $value[1] . "\"";
-                        }
-                    }
-                }
-            }
-
-            if ($isPk) {
-                $query .= " PRIMARY KEY";
-            }
-
-            $query .= ");";
-
-            $result = $this->connection->query($query);
-            if ($result) {
-                return $this->createStorageIndex();
-            }
-            return false;
-        }
-
-        public function createStorageIndex()
-        {
-            if (count($this->info->indexes) == 0) {
-                return true;
-            }
-            foreach ($this->info->indexes as $index) {
-                $query = "CREATE INDEX IF NOT EXISTS \"" . $index . "\" ON \"" . $this->name . "\" (\"" . $index . "\")";
-                $result = $this->connection->query($query);
-                if ($result) {
-                    continue;
-                }
-                return false;
-            }
+        return $def;
+    }
+
+    public function createStorage()
+    {
+        if ($this->tableExists()) {
             return true;
         }
 
-        public function recreateStorage()
-        {
-            $this->destroyStorage();
+        $before = false;
+        $query = "CREATE TABLE " . $this->quoteIdentifier($this->name) . " (";
+        foreach ($this->info->fields as $key => $value) {
+            if ($before) {
+                $query .= ",";
+            } else {
+                $before = true;
+            }
+            $query .= $this->buildColumnDefinition($key, $value);
+        }
+
+        if ($this->info->primaryKey) {
+            if ($before) {
+                $query .= ",";
+            }
+            $query .= "PRIMARY KEY(" . $this->quoteIdentifier($this->info->primaryKey) . ")";
+        }
+
+        $query .= ");";
+
+        $result = $this->connection->queryPrepare($query, $this->getQueryParams());
+        if ($result) {
+            return $this->createStorageIndex();
+        }
+        return false;
+    }
+
+    public function createStorageIndex()
+    {
+        if (count($this->info->indexes) == 0) {
+            return true;
+        }
+        foreach ($this->info->indexes as $index) {
+            $query = "CREATE INDEX IF NOT EXISTS " . $this->quoteIdentifier($index) . " ON " . $this->quoteIdentifier($this->name) . " (" . $this->quoteIdentifier($index) . ")";
+            $result = $this->connection->queryPrepare($query, $this->getQueryParams());
+            if ($result) {
+                continue;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    public function storageRemoveField($name)
+    {
+        // PostgreSQL drops any index that referenced the column along with it.
+        $query = "ALTER TABLE " . $this->quoteIdentifier($this->name) . " DROP COLUMN " . $this->quoteIdentifier($name) . ";";
+        $result = $this->connection->queryPrepare($query, $this->getQueryParams());
+        if ($result) {
+            return true;
+        }
+        return false;
+    }
+
+    public function storageRenameField($oldName, $newName)
+    {
+        $query = "ALTER TABLE " . $this->quoteIdentifier($this->name) . " RENAME COLUMN " . $this->quoteIdentifier($oldName) . " TO " . $this->quoteIdentifier($newName) . ";";
+        $result = $this->connection->queryPrepare($query, $this->getQueryParams());
+        if ($result) {
+            return true;
+        }
+        return false;
+    }
+
+    public function storageUpdateField($name)
+    {
+        if (!array_key_exists($name, $this->info->fields)) {
+            return false;
+        }
+        $value = $this->info->fields[$name];
+
+        // SERIAL/BIGSERIAL columns are sequence-backed; their type and default
+        // must not be rewritten through this path.
+        if ((count($value) > 3) && ($value[3] === "autoIncrement")) {
+            return true;
+        }
+
+        $tbl = $this->quoteIdentifier($this->name);
+        $col = $this->quoteIdentifier($name);
+        $type = $this->pgType($value);
+
+        // PostgreSQL changes a column's type with a dedicated sub-command and
+        // an explicit USING cast (it will not implicitly coerce, e.g. int->text).
+        $query = "ALTER TABLE " . $tbl . " ALTER COLUMN " . $col . " TYPE " . $type . " USING " . $col . "::" . $type . ";";
+        if (!$this->connection->queryPrepare($query, $this->getQueryParams())) {
+            return false;
+        }
+
+        // Default: declared -> SET, otherwise DROP.
+        if ((count($value) > 1) && !(is_null($value[1]) || ($value[1] === "DEFAULT"))) {
+            if (is_int($value[1])) {
+                $default = (string) $value[1];
+            } else {
+                $default = "'" . addcslashes($value[1], "'\\") . "'";
+            }
+            if (!$this->connection->queryPrepare("ALTER TABLE " . $tbl . " ALTER COLUMN " . $col . " SET DEFAULT " . $default . ";")) {
+                return false;
+            }
+        } else {
+            $this->connection->queryPrepare("ALTER TABLE " . $tbl . " ALTER COLUMN " . $col . " DROP DEFAULT;");
+        }
+
+        // Integer columns are declared NOT NULL by createStorage(); keep parity.
+        if (($value[0] === "int") || ($value[0] === "bigint")) {
+            if (!$this->connection->queryPrepare("ALTER TABLE " . $tbl . " ALTER COLUMN " . $col . " SET NOT NULL;")) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // True when a base table with this name exists in the current schema.
+    protected function tableExists()
+    {
+        $stmt = $this->connection->queryPrepare(
+            "SELECT 1 FROM " . $this->quoteIdentifier("information_schema") . "." . $this->quoteIdentifier("tables") .
+            " WHERE " . $this->quoteIdentifier("table_schema") . "=CURRENT_SCHEMA() AND " . $this->quoteIdentifier("table_name") . "=? LIMIT 1;",
+            [$this->name]
+        );
+        if ($stmt) {
+            return (bool) $stmt->fetch(\PDO::FETCH_NUM);
+        }
+        return false;
+    }
+
+    // Map of live column name => [ data_type, character_maximum_length ].
+    protected function readColumns()
+    {
+        $columns = [];
+        $stmt = $this->connection->queryPrepare(
+            "SELECT " . $this->quoteIdentifier("column_name") . "," . $this->quoteIdentifier("data_type") . "," . $this->quoteIdentifier("character_maximum_length") .
+            " FROM " . $this->quoteIdentifier("information_schema") . "." . $this->quoteIdentifier("columns") .
+            " WHERE " . $this->quoteIdentifier("table_schema") . "=CURRENT_SCHEMA() AND " . $this->quoteIdentifier("table_name") . "=?;",
+            [$this->name]
+        );
+        if ($stmt) {
+            foreach ($stmt->fetchAll(\PDO::FETCH_NUM) as $row) {
+                $columns[$row[0]] = [strtolower((string) $row[1]), is_null($row[2]) ? null : intval($row[2])];
+            }
+        }
+        return $columns;
+    }
+
+    // The [ data_type, length ] signature the descriptor implies, matching how
+    // PostgreSQL reports it in information_schema.columns.
+    protected function expectedColumnSignature($value)
+    {
+        $type = strtolower($value[0]);
+        if ($type === "varchar") {
+            return ["character varying", (count($value) > 2) ? intval($value[2]) : null];
+        }
+        if (($type === "int") || ($type === "integer")) {
+            return ["integer", null];
+        }
+        if ($type === "bigint") {
+            return ["bigint", null];
+        }
+        if ($type === "datetime") {
+            return ["timestamp without time zone", null];
+        }
+        return [$type, null];
+    }
+
+    // Index names the descriptor expects (named after the field, as
+    // createStorageIndex does).
+    protected function expectedIndexNames()
+    {
+        $names = [];
+        foreach ($this->info->indexes as $index) {
+            $names[] = $index;
+        }
+        return $names;
+    }
+
+    // Live secondary index names (the PRIMARY KEY index is excluded via
+    // pg_index.indisprimary).
+    protected function currentIndexNames()
+    {
+        $names = [];
+        $stmt = $this->connection->queryPrepare(
+            "SELECT c.relname FROM pg_index i" .
+            " JOIN pg_class c ON c.oid=i.indexrelid" .
+            " JOIN pg_class t ON t.oid=i.indrelid" .
+            " JOIN pg_namespace n ON n.oid=t.relnamespace" .
+            " WHERE n.nspname=CURRENT_SCHEMA() AND t.relname=? AND i.indisprimary=false;",
+            [$this->name]
+        );
+        if ($stmt) {
+            foreach ($stmt->fetchAll(\PDO::FETCH_NUM) as $row) {
+                $names[] = $row[0];
+            }
+        }
+        return $names;
+    }
+
+    protected function reconcileIndexes()
+    {
+        $expected = $this->expectedIndexNames();
+        foreach ($this->currentIndexNames() as $name) {
+            if (!in_array($name, $expected, true)) {
+                if (!$this->connection->queryPrepare("DROP INDEX IF EXISTS " . $this->quoteIdentifier($name) . ";")) {
+                    return false;
+                }
+            }
+        }
+        return $this->createStorageIndex();
+    }
+
+    public function storageCheckTable()
+    {
+        if (!$this->tableExists()) {
+            return false;
+        }
+
+        $actual = $this->readColumns();
+
+        $actualNames = array_keys($actual);
+        $expectedNames = array_keys($this->info->fields);
+        sort($actualNames);
+        sort($expectedNames);
+        if ($actualNames !== $expectedNames) {
+            return false;
+        }
+
+        // Compare data type (and varchar length). Defaults and NOT NULL are not
+        // compared: their catalog representation is noisy (e.g. SERIAL adds a
+        // nextval() default, char defaults carry a ::type cast).
+        foreach ($this->info->fields as $key => $value) {
+            if ($actual[$key] !== $this->expectedColumnSignature($value)) {
+                return false;
+            }
+        }
+
+        $actualIdx = $this->currentIndexNames();
+        $expectedIdx = $this->expectedIndexNames();
+        sort($actualIdx);
+        sort($expectedIdx);
+        return $actualIdx === $expectedIdx;
+    }
+
+    public function storageUpdateTable()
+    {
+        if (!$this->tableExists()) {
             return $this->createStorage();
         }
 
-        public function storageRemoveField($name)
-        {
-            $query = "ALTER TABLE \"" . $this->name . "\" DROP COLUMN \"" . $name . "\";";
-            $result = $this->connection->query($query);
-            if ($result) {
-                return true;
+        $actual = $this->readColumns();
+
+        // Add new columns and retype the drifted ones.
+        foreach ($this->info->fields as $key => $value) {
+            if (!array_key_exists($key, $actual)) {
+                $query = "ALTER TABLE " . $this->quoteIdentifier($this->name) . " ADD COLUMN " . $this->buildColumnDefinition($key, $value) . ";";
+                if (!$this->connection->queryPrepare($query, $this->getQueryParams())) {
+                    return false;
+                }
+                continue;
             }
-            return false;
+            if ($actual[$key] !== $this->expectedColumnSignature($value)) {
+                if (!$this->storageUpdateField($key)) {
+                    return false;
+                }
+            }
         }
 
-        public function storageRenameField($oldName, $newName)
-        {
-            $query = "ALTER TABLE \"" . $this->name . "\" CHANGE COLUMN \"" . $oldName . "\" \"" . $newName . "\";";
-            $result = $this->connection->query($query);
-            if ($result) {
-                return true;
+        // Drop columns the descriptor no longer declares.
+        foreach (array_keys($actual) as $name) {
+            if (!array_key_exists($name, $this->info->fields)) {
+                if (!$this->storageRemoveField($name)) {
+                    return false;
+                }
             }
-            return false;
         }
 
-        public function storageUpdateField($name)
-        {
-            $query = "ALTER TABLE \"" . $this->name . "\" MODIFY ";
-
-            $key = $name;
-            $value = $this->info->fields[$name];
-
-            $isPk = false;
-            if ($this->info->primaryKey) {
-                if ($this->info->primaryKey == $key) {
-                    $isPk = true;
-                }
-            }
-
-            if ($isPk) {
-                $query .= "\"" . $key . "\"";
-            } else {
-                if ($value[0] == "datetime") {
-                    $query .= "\"" . $key . "\" TIMESTAMP";
-                } else {
-                    $query .= "\"" . $key . "\" " . strtoupper($value[0]);
-                }
-            }
-
-
-            if ($value[0] == "varchar") {
-                if (count($value) > 2) {
-                    $query .= "(" . strtoupper($value[2]) . ")";
-                }
-                if (count($value) > 1) {
-                    if (!is_null($value[1])) {
-                        $query .= " DEFAULT \"" . $value[1] . "\"";
-                    }
-                }
-                $query .= ";";
-                $result = $this->connection->query($query);
-                if ($result) {
-                    return true;
-                }
-                return false;
-            }
-
-            if (count($value) > 2) {
-                $query .= " " . strtoupper($value[2]);
-            }
-            if (($value[0] == "int") || ($value[0] == "bigint")) {
-                $query .= " NOT NULL";
-            }
-            if (count($value) > 3) {
-                if ($value[3] == "autoIncrement") {
-                    $query .= " SERIAL";
-                } else {
-                    $query .= " " . strtoupper($value[3]);
-                }
-            }
-
-            if (count($value) > 1) {
-                if (!(is_null($value[1]) || (strcmp($value[1], "DEFAULT") == 0))) {
-                    if (is_int($value[1])) {
-                        $query .= " DEFAULT " . $value[1];
-                    } else {
-                        $query .= " DEFAULT \"" . $value[1] . "\"";
-                    }
-                }
-            }
-
-            if ($isPk) {
-                $query .= " PRIMARY KEY";
-            }
-
-            $query .= ";";
-            $result = $this->connection->query($query);
-            if ($result) {
-                return true;
-            }
-            return false;
-        }
+        return $this->reconcileIndexes();
     }
-
 }

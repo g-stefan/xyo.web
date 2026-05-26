@@ -1,220 +1,74 @@
 <?php
+
 // XYO.Web
-// Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// MIT License (MIT) <http://opensource.org/licenses/MIT>
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web\DataSource\Type\PostgreSQL {
+namespace XYO\Web\DataSource\Type\PostgreSQL;
 
-    defined("XYO_WEB") or die("Forbidden");
-    require_once("./_site/xyo/web/datasource/type/postgresql-table.php");
-    require_once("./_site/xyo/web/datasource/type/postgresql-query.php");
+defined("XYO_WEB") or die("Forbidden");
 
-    class Connection
+// This is part of optimized PostgreSQL Driver
+
+require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/abstract-sql-connection.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/postgresql-table.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/postgresql-query.php");
+
+class Connection extends \XYO\Web\DataSource\Type\AbstractSQLConnection
+{
+    protected $user;
+    protected $password;
+    protected $server;
+    protected $port;
+    protected $database;
+
+    public function __construct($configuration)
     {
+        parent::__construct();
 
-        protected $db;
+        $this->db = null;
+        $this->prefix = "";
+        $this->user = "";
+        $this->password = "";
+        $this->server = "";
+        $this->port = "";
+        $this->database = "";
 
-        protected $user;
-        protected $password;
-        protected $server;
-        protected $port;
-        protected $database;
-        protected $prefix;
-        protected $inUse;
-        protected $forceUse;
-
-        public function __construct($configuration)
-        {
-            $this->db = null;
-            $this->user = "";
-            $this->password = "";
-            $this->server = "";
-            $this->port = "";
-            $this->database = "";
-            $this->prefix = "";
-            $this->inUse = false;
-            $this->forceUse = false;
-
-            foreach ($configuration as $key => $value) {
-                if (property_exists($this, $key)) {
-                    $this->$key = $value;
-                }
-            }
-        }
-
-        public function open()
-        {
-            if ($this->db) {
-                return true;
-            }
-            $server = $this->server;
-            if (strlen($this->port)) {
-                $server .= ":" . $this->port;
-            }
-            $this->db = @pg_connect("host=" . $this->server . " port=" . $this->port . " dbname=" . $this->database . " user=" . $this->user . " password=" . $this->password);
-            if (!$this->db) {
-                $this->db = null;
-                return false;
-            }
-            return true;
-        }
-
-        public function isOpen()
-        {
-            return $this->db !== null;
-        }
-
-        public function close()
-        {
-            if ($this->db) {
-                pg_close($this->db);
-                $this->db = null;
-            }
-        }
-
-        public function query($query)
-        {
-            $this->use();
-            $result = pg_query($this->db, $query);
-            if (!$result) {
-                $result = null;
-            }
-            return $result;
-        }
-        public function use()
-        {
-            if (!$this->forceUse) {
-                if ($this->inUse) {
-                    return true;
-                }
-                $this->inUse = true;
-            }
-            $query = "USE \"" . $this->database . "\";";
-            $result = pg_query($this->db, $query);
-            if (!$result) {
-                $result = null;
-            }
-            return $result;
-        }
-
-        public function safeValue($value)
-        {
-            return pg_escape_string($this->db, $value);
-        }
-
-        public function safeLikeValue($value)
-        {
-            return addcslashes(pg_escape_string($this->db, $value), "%_");
-        }
-
-        public function safeTypeValue($type, $value)
-        {
-            if ($type == "int") {
-                if (strcmp($value, "DEFAULT") == 0) {
-                    return "DEFAULT";
-                }
-                return $this->safeValue(1 * $value);
-            } else if ($type == "bigint") {
-                if (strcmp($value, "DEFAULT") == 0) {
-                    return "DEFAULT";
-                }
-                return $this->safeValue(1 * $value);
-            } else if ($type == "float") {
-                if (strcmp($value, "DEFAULT") == 0) {
-                    return "DEFAULT";
-                }
-                return $this->safeValue(1 * $value);
-            } else if ($type == "text") {
-                if (is_null($value)) {
-                    return "NULL";
-                }
-                return "\"" . $this->safeValue($value) . "\"";
-            } else if ($type == "varchar") {
-                if (is_null($value)) {
-                    return "NULL";
-                }
-                return "\"" . $this->safeValue($value) . "\"";
-            } else if ($type == "date") {
-                if (is_null($value)) {
-                    return "NULL";
-                }
-                if ($value == "NOW") {
-                    return "CURDATE()";
-                }
-                return "\"" . $this->safeValue($value) . "\"";
-            } else if ($type == "time") {
-                if (is_null($value)) {
-                    return "NULL";
-                }
-                if ($value == "NOW") {
-                    return "CURTIME()";
-                }
-                return "\"" . $this->safeValue($value) . "\"";
-            } else if ($type == "datetime") {
-                if (is_null($value)) {
-                    return "NULL";
-                }
-                if ($value == "NOW") {
-                    return "NOW()";
-                }
-                return "\"" . $this->safeValue($value) . "\"";
-            }
-            return null;
-        }
-
-        public function queryValue($query, $default = null)
-        {
-            $result = $this->query($query);
-            if ($result) {
-                $data = pg_fetch_row($result);
-                if ($data) {
-                    return $data[0];
-                }
-            }
-            return $default;
-        }
-
-        public function queryAssoc($query)
-        {
-            $result = $this->query($query);
-            if ($result) {
-                $data = pg_fetch_row($result);
-                if ($data) {
-                    return $data;
-                }
-            }
-            return null;
-        }
-
-        public function &connectTable(&$connector = null)
-        {
-            $table = new \XYO\Web\DataSource\Type\MySQL\Table($this, $connector);
-            return $table;
-        }
-
-        public function &connectQuery(&$connector = null)
-        {
-            $query = new \XYO\Web\DataSource\Type\MySQL\Query($this, $connector);
-            return $query;
-        }
-
-        public function multiQuery($query)
-        {
-            $this->use();
-            $result = pg_query($this->db, $query);
-            if (!$result) {
-                $result = null;
-            }
-            return $result;
-        }
-
-        public function getPrefix()
-        {
-            return $this->prefix;
-        }
+        $this->loadConfiguration($configuration);
     }
 
-    return Connection::class;
+    protected function dsn()
+    {
+        $dsn = "pgsql:host=" . $this->server;
+        if (strlen($this->port)) {
+            $dsn .= ";port=" . $this->port;
+        }
+        $dsn .= ";dbname=" . $this->database;
+        return $dsn;
+    }
+
+    protected function connectUser()
+    {
+        return $this->user;
+    }
+
+    protected function connectPassword()
+    {
+        return $this->password;
+    }
+
+    protected function logChannel()
+    {
+        return "postgresql-connection";
+    }
+
+    protected function newTable($connector)
+    {
+        return new Table($this, $connector);
+    }
+
+    protected function newQuery($connector)
+    {
+        return new Query($this, $connector);
+    }
 }

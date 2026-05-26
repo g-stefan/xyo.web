@@ -1,416 +1,516 @@
 <?php
+
 // XYO.Web
-// Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// MIT License (MIT) <http://opensource.org/licenses/MIT>
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web {
-	defined("XYO_WEB") or die("Forbidden");
+namespace XYO\Web;
 
-	require_once("./_site/xyo/web/info.php");
-	require_once("./_site/xyo/web/view.php");
-	require_once("./_site/xyo/web/authorization.php");
-	require_once("./_site/xyo/web/firewall.php");
-	require_once("./_site/xyo/web/client.php");
-	require_once("./_site/xyo/web/datasource/connection.php");
-	require_once("./_site/xyo/web/state.php");
+use Exception;
+use stdClass;
 
-	class Router
-	{
-		private static $instance = null;
-		protected $info;
-		protected $firewall;
-		protected $request;
+defined("XYO_WEB") or die("Forbidden");
 
-		protected function __construct()
-		{
-			$this->firewall = \XYO\Web\Firewall::instance();
-			$this->request = \XYO\Web\Request::instance();
-			$this->info = \XYO\Web\Info::instance();
-			$this->info->path = "./";
-			$this->info->location = "";
-			$this->info->sitePath = "";
-			$this->info->routeType = $this->info->routeTypeUnknown;
-			$this->info->routeFile = "";
-			$this->info->routeAuthorization = null;
-		}
+require_once(XYO_WEB_PATH . "_site/xyo/web/log.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/info.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/view.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/authorization.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/firewall.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/client.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/connection.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/module.php");
 
-		public static function instance()
-		{
-			return self::$instance;
-		}
+class Router
+{
+    protected $web;
+    protected $info;
+    protected $firewall;
+    protected $request;
+    protected $config;
 
-		public static function init()
-		{
-			self::$instance = new Router();
-		}
+    protected $view;
+    protected $dsConnection;
 
-		public function run()
-		{
-			$this->firewall->prepare();
-			if (!$this->sitePathFromRequestURI()) {
-				$this->renderError("400");
-				return;
-			}
-			if (!$this->requestPathCheckEnding()) {
-				$this->renderRedirect($this->info->location);
-				return;
-			}
-			if (!$this->pathCheckBounds($this->info->path)) {
-				$this->renderError("400");
-				return;
-			}
+    public function __construct($web, $firewall)
+    {
+        $this->web = $web;
+        $this->firewall = $firewall;
+        $this->request = $web->get(\XYO\Web\Request::class);
+        $this->info = $web->get(\XYO\Web\Info::class);
+        $this->info->path = XYO_WEB_PATH;
+        $this->info->location = "";
+        $this->info->site = "";
+        $this->info->routeType = $this->info->routeTypeUnknown;
+        $this->info->routeFile = "";
+        $this->info->authorization = null;
 
-			if ($this->findPage($this->info->path, $this->info->routeFile)) {
-				$this->info->routeType = $this->info->routeTypePage;
-			} else
-				if ($this->findAPI($this->info->path, $this->info->routeFile)) {
-					$this->info->routeType = $this->info->routeTypeAPI;
-				} else
-					if ($this->findSlug($this->info->path, $this->info->routeFile)) {
-						$this->info->routeType = $this->info->routeTypeSlug;
-					} else
-						if (defined("XYO_WEB_SERVICE")) {
-							if ($this->findService($this->info->path, $this->info->routeFile)) {
-								$this->info->routeType = $this->info->routeTypeService;
-							}
-						}
+        $this->config = $web->get(\XYO\Web\Config::class);
+        $this->view = $web->get(\XYO\Web\View::class);
+        $this->dsConnection = $web->get(\XYO\Web\DataSource\Connection::class);
+    }
 
-			\XYO\Web\DataSource\Connection::init();
+    public function run()
+    {
+        try {
+            if (!$this->siteFromRequestURI()) {
+                $this->renderError("400");
+                return;
+            }
+            if (!$this->requestPathCheckEnding()) {
+                $this->renderRedirect();
+                return;
+            }
+            if (!$this->pathCheckBounds($this->info->path)) {
+                $this->renderError("400");
+                return;
+            }
 
-			$this->info->routeAuthorization = Authorization::instance();
-			if ($this->info->routeType != $this->info->routeTypeUnknown) {
-				$authorizationFile = $this->findAuthorization($this->info->path);
-				if (!empty($authorizationFile)) {
-					$authorizationClass = require($authorizationFile);
-					$this->info->routeAuthorization = $authorizationClass::instance();
-				}
-			}
+            $this->resolve();
 
-			if (!$this->firewall->run()) {
-				$this->renderError("401");
-				return;
-			}
+            if (!$this->dsConnection->init($this->config)) {
+                $this->renderError("501");
+                return;
+            }
 
-			if ($this->request->isOPTIONS()) {
-				return;
-			}
+            $reason = "";
+            if (!$this->authorize($reason)) {
+                $this->renderError($reason);
+                return;
+            }
 
-			if($this->request->has("_state")) {
-				$state = \XYO\Web\State::instance();
-				$state->decode($this->request->get("_state"));
-			}
+            if ($this->request->isOPTIONS()) {
+                return;
+            }
 
-			if ($this->info->routeType == $this->info->routeTypePage) {
-				$this->renderPage($this->info->routeFile, $this->info->path);
-				return;
-			}
-			if ($this->info->routeType == $this->info->routeTypeAPI) {
-				$this->renderAPI($this->info->routeFile, $this->info->path);
-				return;
-			}
-			if ($this->info->routeType == $this->info->routeTypeSlug) {
-				$this->renderSlug($this->info->routeFile, $this->info->path);
-				return;
-			}
-			if ($this->info->routeType == $this->info->routeTypeService) {
-				$this->renderService($this->info->routeFile, $this->info->path);
-				return;
-			}
+            $this->render();
+        } catch (\Throwable $e) {
+            $this->renderError("501");
+            \XYO\Web\Log::logMessage("router", ["datetime" => date("Y-m-d H:i:s"), "message" => $e->getMessage()]);
+        }
+    }
 
-			$this->renderError("404");
-		}
+    public function resolve()
+    {
+        if ($this->findPage($this->info->path, $this->info->routeFile)) {
+            $this->info->routeType = $this->info->routeTypePage;
+        } elseif ($this->findAPI($this->info->path, $this->info->routeFile)) {
+            $this->info->routeType = $this->info->routeTypeAPI;
+        } elseif ($this->findSlug($this->info->path, $this->info->routeFile)) {
+            $this->info->routeType = $this->info->routeTypeSlug;
+        } elseif (defined("XYO_WEB_SERVICE")) {
+            if ($this->findService($this->info->path, $this->info->routeFile)) {
+                $this->info->routeType = $this->info->routeTypeService;
+            }
+        }
+    }
 
-		public function renderPage($page, $path)
-		{
-			$this->info->path = $path;
+    public function authorize(&$reason)
+    {
+        $this->info->authorization = new \XYO\Web\Authorization(
+            $this->info,
+            $this->config,
+            $this->request,
+            $this->dsConnection
+        );
+        if ($this->info->routeType != $this->info->routeTypeUnknown) {
+            $authorizationFile = $this->findAuthorization($this->info->path);
+            if (!empty($authorizationFile)) {
+                $authorizationClass = require($authorizationFile);
+                if (!class_exists($authorizationClass, false)) {
+                    $reason = "501";
+                    return false;
+                }
+                if (!is_subclass_of($authorizationClass, \XYO\Web\Authorization::class)) {
+                    $reason = "501";
+                    return false;
+                }
+                $this->info->authorization = new $authorizationClass(
+                    $this->info,
+                    $this->config,
+                    $this->request,
+                    $this->dsConnection
+                );
+            }
+        }
 
-			if ($this->request->isAJAX() || $this->request->isJSON()) {
-				$component = $this->request->get("_component", "");
-				if (strlen($component) > 0) {
-					$pageClass = require($page);
-					$this->info->page = $pageClass::instance();
-					$this->info->page->init();
-					$this->info->page->initComponent($component);					
-					$this->info->page->process();
-					$this->info->page->renderComponent($component);
-					return;
-				}
-			}
-			\XYO\Web\Client::init();
-			$layout = $this->findLayout($path);
-			$layoutClass = require($layout);
-			$this->info->layout = $layoutClass::instance();
-			$pageClass = require($page);
-			$this->info->page = $pageClass::instance();
-			$this->info->layout->init();
-			$this->info->layout->initComponents();
+        if (!$this->firewall->run()) {
+            $reason = "401";
+            return false;
+        }
+        return true;
+    }
 
-			$this->info->page->init();
-			$this->info->page->initComponents();			
-			$this->info->page->process();
+    public function render()
+    {
+        if ($this->info->routeType == $this->info->routeTypePage) {
+            $this->renderPage($this->info->routeFile, $this->info->path);
+            return;
+        }
+        if ($this->info->routeType == $this->info->routeTypeAPI) {
+            $this->renderAPI($this->info->routeFile, $this->info->path);
+            return;
+        }
+        if ($this->info->routeType == $this->info->routeTypeSlug) {
+            $this->renderSlug($this->info->routeFile, $this->info->path);
+            return;
+        }
+        if ($this->info->routeType == $this->info->routeTypeService) {
+            $this->renderService($this->info->routeFile, $this->info->path);
+            return;
+        }
 
-			$this->info->layout->process();
-			$this->info->layout->renderLayout($this->info->page);
-		}
+        $this->renderError("404");
+    }
 
-		public function renderAPI($apiFile, $path)
-		{
-			$this->info->path = $path;
+    public function isModuleClass($className)
+    {
+        if (!class_exists($className, false)) {
+            $this->renderError("501");
+            return false;
+        }
+        if (!is_subclass_of($className, \XYO\Web\Module::class)) {
+            $this->renderError("501");
+            return false;
+        }
+        return true;
+    }
 
-			$apiClass = require($apiFile);
-			$this->info->api = $apiClass::instance();
-			$this->info->api->init();
-			$this->info->api->process();
-			$this->info->api->render();
-		}
+    public function renderPage($page, $path)
+    {
+        $this->info->path = $path;
 
-		public function renderSlug($slug, $path)
-		{
-			$this->renderPage($slug, $path);
-		}
+        if ($this->request->isAJAX() || $this->request->isJSON()) {
+            $component = $this->request->get("_component", "");
+            if (strlen($component) > 0) {
+                $pageClass = require($page);
+                if (!$this->isModuleClass($pageClass)) {
+                    return;
+                }
+                $this->info->page = new $pageClass($this->web);
+                $this->info->page->init();
+                $this->info->page->initComponent($component);
+                $this->info->page->process();
+                session_write_close();
+                $this->info->page->renderComponent($component);
+                return;
+            }
+            $componentList = $this->request->get("_batch", "");
+            if (strlen($componentList) > 0) {
+                $idList = array_filter(array_map("trim", explode(",", $componentList)));
+                $pageClass = require($page);
+                if (!$this->isModuleClass($pageClass)) {
+                    return;
+                }
+                $this->info->page = new $pageClass($this->web);
+                $this->info->page->init();
+                foreach ($idList as $id) {
+                    $this->info->page->initComponent($id);
+                }
+                $this->info->page->process();
+                session_write_close();
+                $out = [];
+                foreach ($idList as $id) {
+                    $out[] = [$id, $this->info->page->strRenderComponent($id)];
+                }
+                header("Content-Type: application/json");
+                echo json_encode($out);
+                return;
+            }
+        }
 
-		public function renderService($apiFile, $path)
-		{
-			$this->info->path = $path;
+        Client::init($this->view, $this->info->site);
 
-			$apiClass = require($apiFile);
-			$this->info->api = $apiClass::instance();
-			$this->info->api->init();
-			$this->info->api->process();
-			$this->info->api->render();
-		}
+        $layout = $this->findLayout($path);
+        $layoutClass = require($layout);
+        if (!$this->isModuleClass($layoutClass)) {
+            return;
+        }
+        $this->info->layout = new $layoutClass($this->web);
+        $pageClass = require($page);
+        if (!$this->isModuleClass($pageClass)) {
+            return;
+        }
+        $this->info->page = new $pageClass($this->web);
+        $this->info->layout->init();
+        $this->info->layout->initComponents();
 
-		public function requestPathCheckEnding()
-		{
-			$request = "";
-			if (array_key_exists("__", $_GET)) {
-				$path = trim($_GET["__"]);
-				//
-				// Redirect .../page/ to .../page
-				//
-				if (substr($path, -1) == "/") {
-					$protocol = "http";
-					if (array_key_exists("HTTPS", $_SERVER)) {
-						if (strcmp(strtolower($_SERVER["HTTPS"]), "on") == 0) {
-							$protocol = "https";
-						} else
-							if (strcmp($_SERVER["HTTPS"], "1") == 0) {
-								$protocol = "https";
-							}
-					}
+        $this->info->page->init();
+        $this->info->page->initComponents();
+        $this->info->page->process();
 
-					$location = $protocol . "://" . $_SERVER["HTTP_HOST"] . substr($_SERVER["REQUEST_URI"], 0, -1);
-					$pos = strpos($_SERVER["REQUEST_URI"], "?", 0);
-					if ($pos !== FALSE) {
-						$location = $protocol . "://" . $_SERVER["HTTP_HOST"] . substr($_SERVER["REQUEST_URI"], 0, $pos - 1) . substr($_SERVER["REQUEST_URI"], $pos);
-					}
+        $this->info->layout->process();
+        session_write_close();
+        $this->info->layout->renderLayout($this->info->page);
+    }
 
-					$this->info->location = $location;
-					return false;
-				}
-				if (strlen($path)) {
-					$cwd = str_replace("\\", "/", getcwd());
-					if (!(strcmp($path, $cwd) == 0)) {
-						$request = $path;
-					}
-				}
-			}
-			$this->info->path = $request;
-			return true;
-		}
+    public function renderAPI($apiFile, $path)
+    {
+        $this->info->path = $path;
 
-		public function pathCheckBounds(&$path)
-		{
-			$scan = explode("/", $path);
-			$pathList = array();
-			foreach ($scan as $dir) {
-				if ($dir == ".") {
-					continue;
-				}
-				if ($dir == "..") {
-					if (count($pathList) == 0) {
-						return false;
-					}
-					array_pop($pathList);
-					continue;
-				}
-				$pathList[] = $dir;
-			}
-			$path = implode("/", $pathList);
-			return true;
-		}
+        $apiClass = require($apiFile);
+        if (!$this->isModuleClass($apiClass)) {
+            return;
+        }
+        $this->info->api = new $apiClass($this->web);
+        $this->info->api->init();
+        $this->info->api->process();
+        session_write_close();
+        $this->info->api->render();
+    }
 
-		public function buildPathSearch($path)
-		{
-			$pathSearchList = array();
-			$searchList = explode("/", $path);
-			array_unshift($searchList, ".");
-			array_pop($searchList);
-			$count = count($searchList);
-			while ($count > 0) {
-				$pathSearchList[] = implode("/", $searchList) . "/";
-				array_pop($searchList);
-				--$count;
-			}
-			return $pathSearchList;
-		}
+    public function renderSlug($slug, $path)
+    {
+        $this->renderPage($slug, $path);
+    }
 
-		public function findItem($pathSearchList, $item)
-		{
-			foreach ($pathSearchList as $path) {
-				if (file_exists($path . $item)) {
-					return $path . $item;
-				}
-			}
-			return null;
-		}
+    public function renderService($serviceFile, $path)
+    {
+        $this->info->path = $path;
 
-		public function findPage($path, &$page)
-		{
-			if (strlen($path) == 0) {
-				$path = ".";
-			}
-			$page = $path . "/page.php";
-			if (!file_exists($page)) {
-				if (strcmp($path, ".") != 0) {
-					return false;
-				}
-				$page = "./_site/xyo/web/default/page.php";
-			}
-			return true;
-		}
+        $serviceClass = require($serviceFile);
+        if (!$this->isModuleClass($serviceClass)) {
+            return;
+        }
+        $this->info->api = new $serviceClass($this->web);
+        $this->info->api->init();
+        $this->info->api->process();
+        session_write_close();
+        $this->info->api->render();
+    }
 
-		public function findAPI($path, &$api)
-		{
-			if (strlen($path) == 0) {
-				$path = ".";
-			}
-			$api = $path . "/api.php";
-			return file_exists($api);
-		}
+    public function requestPathCheckEnding()
+    {
+        $request = "";
+        $path = $this->request->getQuery("__", null);
+        if (!is_null($path)) {
+            $path = trim($path);
+            //
+            // Redirect .../page/ to .../page
+            //
+            if (substr($path, -1) == "/") {
 
-		public function findSlug($path, &$slug)
-		{
-			$pathSearchList = $this->buildPathSearch($path);
-			$slug = $this->findItem($pathSearchList, "slug.php");
-			if (is_null($slug)) {
-				return false;
-			}
-			return true;
-		}
+                $location = substr($_SERVER["REQUEST_URI"], 0, -1);
+                $pos = strpos($_SERVER["REQUEST_URI"], "?", 0);
+                if ($pos !== false) {
+                    $location = substr($_SERVER["REQUEST_URI"], 0, $pos - 1) . substr($_SERVER["REQUEST_URI"], $pos);
+                }
 
-		public function findService($path, &$service)
-		{
-			if (defined("XYO_WEB_SERVICE_RUN")) {
-				$service = XYO_WEB_SERVICE_RUN;
-				return true;
-			}
-			if (strlen($path) == 0) {
-				$path = ".";
-			}
-			$filename = $path . "/service.php";
-			if (file_exists($filename)) {
-				$service = $filename;
-				return true;
-			}
-			$service = $path . $service . ".php";
-			return file_exists($service);
-		}
+                $this->info->location = $location;
+                return false;
+            }
+            if (strlen($path)) {
+                $cwd = str_replace("\\", "/", getcwd());
+                if (!($path === $cwd)) {
+                    $request = $path;
+                }
+            }
+        }
+        $this->info->path = $request;
+        return true;
+    }
 
-		public function findLayout($path)
-		{
-			$pathSearchList = $this->buildPathSearch($path);
-			array_unshift($pathSearchList, $path . "/");
-			$pathSearchList[] = "./_site/xyo/web/default/";
-			return $this->findItem($pathSearchList, "layout.php");
-		}
+    public function pathCheckBounds(&$path)
+    {
+        $path = str_replace("\\", "/", $path);
+        // Prevent wrappers and absolute paths
+        if (preg_match('/^([a-zA-Z]:|\/|\\\\)/', $path) || strpos($path, '://') !== false) {
+            return false;
+        }
 
-		public function findAuthorization($path)
-		{
-			$pathSearchList = $this->buildPathSearch($path);
-			array_unshift($pathSearchList, $path . "/");
-			return $this->findItem($pathSearchList, "authorization.php");
-		}
+        $scan = explode("/", $path);
+        $pathList = [];
+        foreach ($scan as $dir) {
+            if ($dir == ".") {
+                continue;
+            }
+            if ($dir == "..") {
+                if (count($pathList) == 0) {
+                    return false;
+                }
+                array_pop($pathList);
+                continue;
+            }
+            $pathList[] = $dir;
+        }
+        $path = implode("/", $pathList);
+        return true;
+    }
 
-		public function renderRedirect($location)
-		{
-			if($this->request->isJSON()) {
-				http_response_code(301);
-				header("Location: " . $this->info->location);
-				return;
-			}
-			
-			$pathSearchList = array();
-			$pathSearchList[] = "./";
-			$pathSearchList[] = "./_site/xyo/web/default/";
-			$this->renderPage($this->findItem($pathSearchList, "301.php"), "./");
-		}
+    public function buildPathSearch($path)
+    {
+        $pathSearchList = [];
+        $searchList = explode("/", $path);
+        array_unshift($searchList, ".");
+        array_pop($searchList);
+        $count = count($searchList);
+        while ($count > 0) {
+            $pathSearchList[] = implode("/", $searchList) . "/";
+            array_pop($searchList);
+            --$count;
+        }
+        return $pathSearchList;
+    }
 
-		public function renderError($error)
-		{
-			if($this->request->isJSON()) {
-				http_response_code($error);
-				return;
-			}
+    public function findItem($pathSearchList, $item)
+    {
+        foreach ($pathSearchList as $path) {
+            if (file_exists($path . $item)) {
+                return $path . $item;
+            }
+        }
+        return null;
+    }
 
-			$pathSearchList = array();
-			$pathSearchList[] = "./";
-			$pathSearchList[] = "./_site/xyo/web/default/";
-			$this->renderPage($this->findItem($pathSearchList, $error . ".php"), "./");
-		}
+    public function findPage($path, &$page)
+    {
+        if (strlen($path) == 0) {
+            $path = ".";
+        }
+        $page = $path . "/page.php";
+        if (!file_exists($page)) {
+            if (!($path === ".")) {
+                return false;
+            }
+            $page = "./_site/xyo/web/default/page.php";
+        }
+        return true;
+    }
 
-		public function sitePathFromRequestURI()
-		{
-			if (array_key_exists("REQUEST_URI", $_SERVER)) {
-				$requestURI = $_SERVER["REQUEST_URI"];
-				$tagIndex = strpos($requestURI, "?__=", 0);
-				if ($tagIndex !== false) {
-					return false;
-				}
-				$tagIndex = strpos($requestURI, "&__=", 0);
-				if ($tagIndex !== false) {
-					return false;
-				}
-				$queryIndex = @strrpos($requestURI, "?", -1);
-				if ($queryIndex !== false) {
-					$requestURI = substr($requestURI, 0, $queryIndex);
-				}
-				if (array_key_exists("__", $_GET)) {
-					$path = $_GET["__"];
-					if (strlen($path) > 0) {
-						$cwd = str_replace("\\", "/", getcwd());
-						if (strcmp($path, $cwd) == 0) {
-							if (substr($requestURI, -1) == "/") {
-								$this->info->sitePath = $requestURI;
-								return true;
-							}
-							$this->info->sitePath = $requestURI . "/";
-							return true;
+    public function findAPI($path, &$api)
+    {
+        if (strlen($path) == 0) {
+            $path = ".";
+        }
+        $api = $path . "/api.php";
+        return file_exists($api);
+    }
 
-						}
-						$this->info->sitePath = substr($requestURI, 0, strlen($requestURI) - strlen($path));
-						return true;
-					}
-				}
-				$this->info->sitePath = $requestURI;
-				$index = strpos($this->info->sitePath, ".php", 0);
-				if ($index === false) {
-					return true;
-				}
-				$index = strrpos($this->info->sitePath, "/", -1);
-				if ($index === false) {
-					$this->info->sitePath = "/";
-					return true;
-				}
-				$this->info->sitePath = substr($this->info->sitePath, 0, $index + 1);
-				return true;
-			}
-			return false;
-		}
+    public function findSlug($path, &$slug)
+    {
+        $pathSearchList = $this->buildPathSearch($path);
+        $slug = $this->findItem($pathSearchList, "slug.php");
+        if (is_null($slug)) {
+            return false;
+        }
+        return true;
+    }
 
-	}
+    public function findService($path, &$service)
+    {
+        if (defined("XYO_WEB_SERVICE_RUN")) {
+            $service = XYO_WEB_SERVICE_RUN;
+            return true;
+        }
+        if (strlen($path) == 0) {
+            $path = ".";
+        }
+        $filename = $path . "/service.php";
+        if (!file_exists($filename)) {
+            return false;
+        }
+        $service = $filename;
+        return true;
+    }
+
+    public function findLayout($path)
+    {
+        $pathSearchList = $this->buildPathSearch($path);
+        array_unshift($pathSearchList, $path . "/");
+        $pathSearchList[] = "./_site/xyo/web/default/";
+        return $this->findItem($pathSearchList, "layout.php");
+    }
+
+    public function findAuthorization($path)
+    {
+        $pathSearchList = $this->buildPathSearch($path);
+        array_unshift($pathSearchList, $path . "/");
+        return $this->findItem($pathSearchList, "authorization.php");
+    }
+
+    public function renderRedirect()
+    {
+        if ($this->request->isJSON() || $this->request->isAPI() || $this->request->isAJAX()) {
+            http_response_code(301);
+            header("Location: " . $this->info->location);
+            return;
+        }
+
+        $pathSearchList = [];
+        $pathSearchList[] = "./";
+        $pathSearchList[] = "./_site/xyo/web/default/";
+        $page = $this->findItem($pathSearchList, "301.php");
+        if (is_null($page)) {
+            return;
+        }
+        $this->renderPage($page, "./");
+    }
+
+    public function renderError($error)
+    {
+        if ($this->request->isJSON() || $this->request->isAPI() || $this->request->isAJAX()) {
+            http_response_code(intval($error));
+            return;
+        }
+
+        $this->firewall->initToken();
+
+        $pathSearchList = [];
+        $pathSearchList[] = "./";
+        $pathSearchList[] = "./_site/xyo/web/default/";
+        $page = $this->findItem($pathSearchList, $error . ".php");
+        if (is_null($page)) {
+            return;
+        }
+        $this->renderPage($page, "./");
+    }
+
+    public function siteFromRequestURI()
+    {
+        if (array_key_exists("REQUEST_URI", $_SERVER)) {
+            $requestURI = $_SERVER["REQUEST_URI"];
+            $tagIndex = strpos($requestURI, "?__=", 0);
+            if ($tagIndex !== false) {
+                return false;
+            }
+            $tagIndex = strpos($requestURI, "&__=", 0);
+            if ($tagIndex !== false) {
+                return false;
+            }
+            $queryIndex = strrpos($requestURI, "?", -1);
+            if ($queryIndex !== false) {
+                $requestURI = substr($requestURI, 0, $queryIndex);
+            }
+            $path = $this->request->getQuery("__", null);
+            if (!is_null($path)) {
+                if (strlen($path) > 0) {
+                    $cwd = str_replace("\\", "/", getcwd());
+                    if ($path === $cwd) {
+                        if (substr($requestURI, -1) === "/") {
+                            $this->info->site = $requestURI;
+                            return true;
+                        }
+                        $this->info->site = $requestURI . "/";
+                        return true;
+
+                    }
+                    $this->info->site = substr($requestURI, 0, strlen($requestURI) - strlen($path));
+                    return true;
+                }
+            }
+            $this->info->site = $requestURI;
+            $index = strpos($this->info->site, ".php", 0);
+            if ($index === false) {
+                return true;
+            }
+            $index = strrpos($this->info->site, "/", -1);
+            if ($index === false) {
+                $this->info->site = "/";
+                return true;
+            }
+            $this->info->site = substr($this->info->site, 0, $index + 1);
+            return true;
+        }
+        return false;
+    }
 
 }
-

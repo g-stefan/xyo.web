@@ -1,31 +1,29 @@
 <?php
 // XYO.Web
-// Copyright (c) 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// MIT License (MIT) <http://opensource.org/licenses/MIT>
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web\_Default {
+namespace XYO\Web\_Default;
 
-    defined("XYO_WEB") or die("Forbidden");
+defined("XYO_WEB") or die("Forbidden");
 
-    require_once ("./_site/xyo/web/web.php");
-    require_once ("./_site/xyo/web/library/xyo-web-logo.php");
-    use \XYO\Web\Library\XYOWebLogo;
+require_once(XYO_WEB_PATH . "_site/xyo/web/web.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/library/xyo-web-logo.php");
+use XYO\Web\Library\XYOWebLogo;
 
-    class HTTP401 extends \XYO\Web\Page
+class HTTP401 extends \XYO\Web\Page
+{
+    public function init($options = null)
     {
-        public function init($options = null)
-        {
-            http_response_code(401);
+        http_response_code(401);
 
-            $this->setTitle("401 Unauthorized");
+        $this->setTitle("401 Unauthorized");
 
-            XYOWebLogo::register($this, "logo");
-        }
+        XYOWebLogo::register($this, "logo");
+    }
 
-        public function render($options = null)
-        { ?>
+    public function render($options = null)
+    { ?>
             <div class="relative flex min-h-screen flex-col justify-center overflow-hidden bg-stone-300 py-6 sm:py-12">
                 <div
                     class="relative bg-white px-6 pb-8 pt-10 shadow-xl ring-1 ring-gray-900/5 sm:mx-auto sm:max-w-lg sm:rounded-lg sm:px-10">
@@ -47,5 +45,4 @@ namespace XYO\Web\_Default {
         <?php }
     }
 
-    return HTTP401::class;
-}
+return HTTP401::class;
