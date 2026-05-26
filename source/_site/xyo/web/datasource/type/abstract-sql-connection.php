@@ -8,9 +8,6 @@ namespace XYO\Web\DataSource\Type;
 
 defined("XYO_WEB") or die("Forbidden");
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/log.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/empty-field.php");
-
 use XYO\Web\DataSource\EmptyField;
 
 // Shared PDO connection logic for the SQL drivers.

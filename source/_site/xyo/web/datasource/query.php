@@ -7,10 +7,6 @@
 namespace XYO\Web\DataSource;
 
 defined("XYO_WEB") or die("Forbidden");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/empty-field.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/order.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/query-info.php");
-
 #[\AllowDynamicProperties]
 class Query extends \stdClass
 {

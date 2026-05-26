@@ -8,11 +8,6 @@ namespace XYO\Web\DataSource\Type;
 
 defined("XYO_WEB") or die("Forbidden");
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/table-info.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/query-info.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/order.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/datasource-exception.php");
-
 use XYO\Web\DataSource\Order;
 
 // Shared multi-table (joined) read logic for the SQL drivers.

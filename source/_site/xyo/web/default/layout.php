@@ -7,7 +7,6 @@ namespace XYO\Web\_Default;
 
 defined("XYO_WEB") or die("Forbidden");
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/web.php");
 require_once(XYO_WEB_PATH . "_site/xyo/web/library/xyo-web-css.php");
 use XYO\Web\Library\XYOWebCSS;
 

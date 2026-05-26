@@ -8,8 +8,6 @@ namespace XYO\Web;
 
 defined("XYO_WEB") or die("Forbidden");
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/module.php");
-
 class Component extends Module
 {    
     public static function register($render, $id = null, $options = null)

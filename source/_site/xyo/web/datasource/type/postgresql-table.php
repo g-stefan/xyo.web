@@ -10,8 +10,6 @@ defined("XYO_WEB") or die("Forbidden");
 
 // This is part of optimized PostgreSQL Driver
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/abstract-sql-table.php");
-
 class Table extends \XYO\Web\DataSource\Type\AbstractSQLTable
 {
     protected function quoteIdentifier($name)

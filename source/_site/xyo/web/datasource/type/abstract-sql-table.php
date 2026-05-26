@@ -8,10 +8,6 @@ namespace XYO\Web\DataSource\Type;
 
 defined("XYO_WEB") or die("Forbidden");
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/empty-field.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/order.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/datasource-exception.php");
-
 use XYO\Web\DataSource\Order;
 
 // Shared single-table WHERE / SELECT / CRUD logic for the SQL drivers.

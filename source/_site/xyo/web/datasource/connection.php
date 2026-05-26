@@ -7,8 +7,6 @@
 namespace XYO\Web\DataSource;
 
 defined("XYO_WEB") or die("Forbidden");
-require_once(XYO_WEB_PATH . "_site/xyo/web/config.php");
-
 class Connection
 {
     protected $connection;

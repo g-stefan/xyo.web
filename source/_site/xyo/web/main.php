@@ -6,17 +6,6 @@
 
 namespace XYO\Web\Main;
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/registry.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/config.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/info.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/view.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/request.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/session.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/firewall.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/router.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/language.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/connection.php");
-
 function run()
 {
     define("XYO_WEB_RUN", 1);

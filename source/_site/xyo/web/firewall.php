@@ -8,10 +8,6 @@ namespace XYO\Web;
 
 defined("XYO_WEB") or die("Forbidden");
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/info.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/view.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/authorization.php");
-
 class Firewall
 {
     protected $info;

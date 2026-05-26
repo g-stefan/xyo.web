@@ -10,10 +10,6 @@ defined("XYO_WEB") or die("Forbidden");
 
 // This is part of optimized SQLite Driver
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/abstract-sql-connection.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/sqlite-table.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/sqlite-query.php");
-
 class Connection extends \XYO\Web\DataSource\Type\AbstractSQLConnection
 {
     protected $database;

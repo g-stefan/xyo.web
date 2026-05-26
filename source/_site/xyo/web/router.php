@@ -11,15 +11,6 @@ use stdClass;
 
 defined("XYO_WEB") or die("Forbidden");
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/log.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/info.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/view.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/authorization.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/firewall.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/client.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/connection.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/module.php");
-
 class Router
 {
     protected $web;
@@ -354,8 +345,8 @@ class Router
     public function findItem($pathSearchList, $item)
     {
         foreach ($pathSearchList as $path) {
-            if (file_exists($path . $item)) {
-                return $path . $item;
+            if (file_exists(XYO_WEB_PATH . $path . $item)) {
+                return XYO_WEB_PATH . $path . $item;
             }
         }
         return null;
@@ -366,12 +357,12 @@ class Router
         if (strlen($path) == 0) {
             $path = ".";
         }
-        $page = $path . "/page.php";
+        $page = XYO_WEB_PATH . $path . "/page.php";
         if (!file_exists($page)) {
             if (!($path === ".")) {
                 return false;
             }
-            $page = "./_site/xyo/web/default/page.php";
+            $page = XYO_WEB_PATH . "_site/xyo/web/default/page.php";
         }
         return true;
     }
@@ -381,7 +372,7 @@ class Router
         if (strlen($path) == 0) {
             $path = ".";
         }
-        $api = $path . "/api.php";
+        $api = XYO_WEB_PATH . $path . "/api.php";
         return file_exists($api);
     }
 
@@ -404,7 +395,7 @@ class Router
         if (strlen($path) == 0) {
             $path = ".";
         }
-        $filename = $path . "/service.php";
+        $filename = XYO_WEB_PATH . $path . "/service.php";
         if (!file_exists($filename)) {
             return false;
         }

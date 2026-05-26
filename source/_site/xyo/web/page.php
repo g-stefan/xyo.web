@@ -8,10 +8,6 @@ namespace XYO\Web;
 
 defined("XYO_WEB") or die("Forbidden");
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/view.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/module.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/component.php");
-
 class Page extends Module
 {
     public function __construct($web)

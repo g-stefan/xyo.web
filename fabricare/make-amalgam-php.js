@@ -138,3 +138,4 @@ Shell.remove("./output/_site/xyo/web/datasource/type/postgresql-query.php");
 
 Shell.removeDirRecursively("./output/_site/xyo/web/client");
 Shell.removeDirRecursively("./output/_site/xyo/web/release");
+Shell.remove("./output/_site/xyo/web/autoload.php");
