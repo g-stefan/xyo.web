@@ -5,7 +5,7 @@
 		"projects": [
 			{
 				"name" : "xyo.web",
-				"SPDX-License-Identifier": "MIT",
+				"SPDX-License-Identifier": "Apache-2.0",
 				"previousVersion" : "0.1.0"
 			}
 		],
