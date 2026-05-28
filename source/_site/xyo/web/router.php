@@ -102,10 +102,6 @@ class Router
             $authorizationFile = $this->findAuthorization($this->info->path);
             if (!empty($authorizationFile)) {
                 $authorizationClass = require($authorizationFile);
-                if (!class_exists($authorizationClass, false)) {
-                    $reason = "501";
-                    return false;
-                }
                 if (!is_subclass_of($authorizationClass, \XYO\Web\Authorization::class)) {
                     $reason = "501";
                     return false;
@@ -118,6 +114,12 @@ class Router
             $reason = "401";
             return false;
         }
+
+        if (!$this->info->authorization->checkAuthorization()) {
+            $reason = "401";
+            return false;
+        }
+
         return true;
     }
 
@@ -145,18 +147,6 @@ class Router
 
     public function isModuleClass($className)
     {
-        if (!class_exists($className, false)) {
-            $this->renderError("501");
-            \XYO\Web\Log::logMessage(
-                "router",
-                [
-                    "datetime" => date("Y-m-d H:i:s"),
-                    "message" => "module-class-not-found",
-                    "class" => $className
-                ]
-            );
-            return false;
-        }
         if (!is_subclass_of($className, \XYO\Web\Module::class)) {
             $this->renderError("501");
             \XYO\Web\Log::logMessage(
@@ -192,7 +182,6 @@ class Router
     public function renderPage($page, $path)
     {
         $this->info->path = $path;
-        define("XYO_WEB_ROUTER_PATH", $this->info->path);
 
         if ($this->request->isAJAX() || $this->request->isJSON()) {
             $component = $this->request->get("_component", "");
@@ -269,7 +258,6 @@ class Router
     public function renderAPI($apiFile, $path)
     {
         $this->info->path = $path;
-        define("XYO_WEB_ROUTER_PATH", $this->info->path);
 
         $apiClass = require($apiFile);
         if (!$this->isModuleClass($apiClass)) {
@@ -290,7 +278,6 @@ class Router
     public function renderService($serviceFile, $path)
     {
         $this->info->path = $path;
-        define("XYO_WEB_ROUTER_PATH", $this->info->path);
 
         $serviceClass = require($serviceFile);
         if (!$this->isModuleClass($serviceClass)) {
@@ -463,7 +450,7 @@ class Router
         $pathSearchList = [];
         $pathSearchList[] = "./";
         $pathSearchList[] = "./_site/xyo/web/default/";
-        $page = $this->findItem($pathSearchList, "301.php");
+        $page = $this->findItem($pathSearchList, "http-301.php");
         if (is_null($page)) {
             return;
         }
@@ -482,7 +469,7 @@ class Router
         $pathSearchList = [];
         $pathSearchList[] = "./";
         $pathSearchList[] = "./_site/xyo/web/default/";
-        $page = $this->findItem($pathSearchList, $error . ".php");
+        $page = $this->findItem($pathSearchList, "http-".$error . ".php");
         if (is_null($page)) {
             return;
         }

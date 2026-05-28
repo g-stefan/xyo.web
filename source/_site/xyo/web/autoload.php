@@ -28,10 +28,8 @@ function classNameToKebabCase($className)
     if (file_exists($file)) {
         require_once($file);
     };
-    if (defined("XYO_WEB_ROUTER_PATH")) {
-        $file = XYO_WEB_ROUTER_PATH . "/" . $fileKebab . ".php";
-        if (file_exists($file)) {
-            require_once($file);
-        };
+    $file = XYO_WEB_PATH . $fileKebab . ".php";
+    if (file_exists($file)) {
+        require_once($file);
     };
 });

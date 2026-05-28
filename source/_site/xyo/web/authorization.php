@@ -14,6 +14,7 @@ class Authorization
     protected $info;
     protected $config;
     protected $request;
+    protected $session;
     protected $_dsConnection;
 
     public function __construct($web)
@@ -23,6 +24,7 @@ class Authorization
         $this->info = $web->get(\XYO\Web\Info::class);
         $this->config = $web->get(\XYO\Web\Config::class);
         $this->request = $web->get(\XYO\Web\Request::class);
+        $this->session = $web->get(\XYO\Web\Session::class);
         $this->_dsConnection = $web->get(\XYO\Web\DataSource\Connection::class);
 
     }
@@ -99,19 +101,6 @@ class Authorization
         return false;
     }
 
-    public function sessionSet($key, $value)
-    {
-        $_SESSION[$key] = $value;
-    }
-
-    public function sessionGet($key, $defaultValue = null)
-    {
-        if (!array_key_exists($key, $_SESSION)) {
-            return $defaultValue;
-        }
-        return $_SESSION[$key];
-    }
-
     public function getDataSource($className, $connectionName = null)
     {
         return $this->_dsConnection->getDataSource($className, $connectionName);
@@ -122,5 +111,9 @@ class Authorization
         return false;
     }
 
+    public function checkAuthorization()
+    {
+        return true;
+    }
 
 }

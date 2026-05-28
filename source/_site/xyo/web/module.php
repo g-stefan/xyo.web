@@ -26,7 +26,7 @@ class Module
     public $idRequest;
     protected $_selector = null;
     public $site;
-    protected $_parent;
+    protected $parent;
 
     public function __construct($web)
     {
@@ -46,7 +46,7 @@ class Module
         $this->idRequest = "";
         $this->_selector = null;
         $this->site = $this->info->site;
-        $this->_parent = null;
+        $this->parent = null;
     }
 
     public function init($options = null)
@@ -71,10 +71,7 @@ class Module
     {
         if (is_null($id)) {
             $id = $this->generateComponentId();
-        }
-        if (!class_exists($classLibrary, false)) {
-            return null;
-        }
+        }       
         if (!is_subclass_of($classLibrary, Module::class)) {
             return null;
         }
@@ -348,17 +345,17 @@ class Module
 
     public function setParent($parent)
     {
-        $this->_parent = $parent;
+        $this->parent = $parent;
     }
 
     public function getParent()
     {
-        return $this->_parent;
+        return $this->parent;
     }
 
     public function hasParent()
     {
-        return (!is_null($this->_parent));
+        return (!is_null($this->parent));
     }
 
     public function getDataSource($className, $connectionName = null)
