@@ -193,8 +193,7 @@ class Request
 
     public function isComponent($id)
     {
-        $component = $this->get("_component", "");
-        return ($component === $id);
+        return ($this->info->component === $id);
     }
 
     public function isComponentAJAX($id)
@@ -218,5 +217,5 @@ class Request
         $tab = preg_replace("/[^a-z0-9]/i", "", (string) $this->get("_tab", ""));
         return substr($tab, 0, 32) ?: "_default";
     }
-    
+
 }

@@ -19,9 +19,7 @@ if (!defined("XYO_WEB_PATH")) {
     define("XYO_WEB_PATH", str_replace("\\", "/", $root) . "/");
 }
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/table.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/query.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/sqlite-connection.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/autoload.php");
 
 require_once(__DIR__ . "/../_lib/harness.php");
 require_once(__DIR__ . "/../_lib/descriptors.php");
@@ -31,7 +29,7 @@ define("XYO_TEST_DRIVER", "sqlite");
 // A fresh in-memory database per connection: clean state for every run.
 function mock_connection()
 {
-    $connection = new \XYO\Web\DataSource\Type\SQLite\Connection([
+    $connection = new \XYO\Web\DataSource\SQLiteConnection([
         "type"     => "sqlite",
         "database" => ":memory:",
         "prefix"   => "",

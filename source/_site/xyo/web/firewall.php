@@ -13,13 +13,13 @@ class Firewall
     protected $info;
     protected $view;
     protected $session;
-    protected $initToken;
+    protected $_initToken;
 
     public function __construct($info, $view, $session)
     {
         $this->info = $info;
         $this->view = $view;
-        $this->initToken = false;
+        $this->_initToken = false;
         $this->session = $session;
     }
 
@@ -60,7 +60,7 @@ class Firewall
 
     public function initToken()
     {
-        if ($this->initToken) {
+        if ($this->_initToken) {
             return;
         }
 
@@ -71,14 +71,16 @@ class Firewall
         ini_set("session.cookie_secure", !empty($_SERVER["HTTPS"]));
         session_start();
 
-        if ($this->info->authorization->requireTokenReset()) {
-            $this->tokenReset();
+        if (!is_null($this->info->authorization)) {
+            if ($this->info->authorization->requireTokenReset()) {
+                $this->tokenReset();
+            }
         }
 
         $this->cspInit();
         $this->csrfLoad();
 
-        $this->initToken = true;
+        $this->_initToken = true;
 
         $this->session->init();
     }

@@ -16,6 +16,6 @@ class Log
             $message = json_encode($message, JSON_PRETTY_PRINT);
         }
         $type = preg_replace("/[^a-z0-9_-]/i", "", $type);
-        file_put_contents(XYO_WEB_PATH . "_log/" . date("Y-m-d") . "-" . $type . ".log", $message . "\r\n", FILE_APPEND | LOCK_EX);
+        file_put_contents(XYO_WEB_PATH . "_log/" . date("Y-m-d") . "." . $type . ".log", $message . "\r\n", FILE_APPEND | LOCK_EX);
     }
 }

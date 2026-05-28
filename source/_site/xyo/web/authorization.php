@@ -10,17 +10,21 @@ defined("XYO_WEB") or die("Forbidden");
 
 class Authorization
 {
+    protected $web;
     protected $info;
     protected $config;
     protected $request;
-    protected $dsConnection;
+    protected $_dsConnection;
 
-    public function __construct($info, $config, $request, $dsConnection)
+    public function __construct($web)
     {
-        $this->info = $info;
-        $this->config = $config;
-        $this->request = $request;
-        $this->dsConnection = $dsConnection;
+        $this->web = $web;
+
+        $this->info = $web->get(\XYO\Web\Info::class);
+        $this->config = $web->get(\XYO\Web\Config::class);
+        $this->request = $web->get(\XYO\Web\Request::class);
+        $this->_dsConnection = $web->get(\XYO\Web\DataSource\Connection::class);
+
     }
 
     public function checkOPTIONS()
@@ -110,7 +114,7 @@ class Authorization
 
     public function getDataSource($className, $connectionName = null)
     {
-        return $this->dsConnection->getDataSource($className, $connectionName);
+        return $this->_dsConnection->getDataSource($className, $connectionName);
     }
 
     public function requireTokenReset()

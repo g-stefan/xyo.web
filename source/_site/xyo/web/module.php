@@ -17,14 +17,16 @@ class Module
     protected $view;
     protected $info;
     protected $session;
-    protected $dsConnection;
+    protected $_dsConnection;
 
-    protected $components;
-    protected $componentOptions;
-    protected $componentIndex;
+    protected $_components;
+    protected $_componentOptions;
+    protected $_componentIndex;
     public $id;
+    public $idRequest;
+    protected $_selector = null;
     public $site;
-    protected $parent;
+    protected $_parent;
 
     public function __construct($web)
     {
@@ -35,14 +37,16 @@ class Module
         $this->view = $web->get(\XYO\Web\View::class);
         $this->info = $web->get(\XYO\Web\Info::class);
         $this->session = $web->get(\XYO\Web\Session::class);
-        $this->dsConnection = $web->get(\XYO\Web\DataSource\Connection::class);
+        $this->_dsConnection = $web->get(\XYO\Web\DataSource\Connection::class);
 
-        $this->components = [];
-        $this->componentOptions = [];
-        $this->componentIndex = 0;
+        $this->_components = [];
+        $this->_componentOptions = [];
+        $this->_componentIndex = 0;
         $this->id = "";
+        $this->idRequest = "";
+        $this->_selector = null;
         $this->site = $this->info->site;
-        $this->parent = null;
+        $this->_parent = null;
     }
 
     public function init($options = null)
@@ -59,8 +63,8 @@ class Module
 
     public function generateComponentId()
     {
-        ++$this->componentIndex;
-        return "_" . $this->componentIndex;
+        ++$this->_componentIndex;
+        return "_" . $this->_componentIndex;
     }
 
     public function registerComponent($classLibrary, $id = null, $options = null)
@@ -74,75 +78,87 @@ class Module
         if (!is_subclass_of($classLibrary, Module::class)) {
             return null;
         }
-        $this->components[$id] = new $classLibrary($this->web);
-        $this->components[$id]->id = (strlen($this->id) > 0) ? $this->id . "." . $id : $id;
-        $this->components[$id]->setParent($this);
-        $this->componentOptions[$id] = $options;
-        return $this->components[$id];
+        $this->_components[$id] = new $classLibrary($this->web);
+        $this->_components[$id]->id = (strlen($this->id) > 0) ? $this->id . "." . $id : $id;
+        $this->_components[$id]->idRequest = (strlen($this->id) > 0) ? $this->getIdRequest() . "/" . $id : $id;
+        $this->_components[$id]->setParent($this);
+        $this->_componentOptions[$id] = $options;
+        return $this->_components[$id];
     }
 
     public function renderComponent($id, $options = null)
     {
         $idList = explode(".", $id);
-        if (count($idList) == 1) {
-            if (!array_key_exists($id, $this->components)) {
-                return;
-            }
-            $this->components[$id]->render($options);
-            return;
-        }
         $id = array_shift($idList);
-        if (!array_key_exists($id, $this->components)) {
+        if (!array_key_exists($id, $this->_components)) {
             return;
         }
-        $this->components[$id]->renderComponent(implode(".", $idList));
+        if (count($idList) == 0) {
+            $this->_components[$id]->render($options);
+            return;
+        }
+        $this->_components[$id]->renderComponent(implode(".", $idList));
     }
 
     public function initComponents()
     {
-        foreach ($this->components as $key => $component) {
-            $component->init($this->componentOptions[$key]);
+        foreach ($this->_components as $key => $component) {
+            $component->init($this->_componentOptions[$key]);
             $component->initComponents();
-            $component->process($this->componentOptions[$key]);
+            $component->process($this->_componentOptions[$key]);
         }
     }
 
     public function initComponent($id)
     {
         $idList = explode(".", $id);
-        if (count($idList) == 1) {
-            if (!array_key_exists($id, $this->components)) {
-                return;
-            }
-            $this->components[$id]->init($this->componentOptions[$id]);
-            $this->components[$id]->initComponents();
-            $this->components[$id]->process($this->componentOptions[$id]);
-            return;
-        }
         $id = array_shift($idList);
-        if (!array_key_exists($id, $this->components)) {
+        if (!array_key_exists($id, $this->_components)) {
             return;
         }
-        $this->components[$id]->init($this->componentOptions[$id]);
-        $this->components[$id]->initComponent(implode(".", $idList));
-        $this->components[$id]->process($this->componentOptions[$id]);
+        $this->_components[$id]->init($this->_componentOptions[$id]);
+
+        if (count($idList) == 0) {
+            $this->_components[$id]->initComponents();
+        } else {
+            $this->_components[$id]->initComponent(implode(".", $idList));
+        }
+
+        $this->_components[$id]->process($this->_componentOptions[$id]);
+    }
+
+    public function initComponentFromRequest($idList)
+    {
+        $idSelector = array_shift($idList);
+        $id = $idSelector[0];
+        if (!array_key_exists($id, $this->_components)) {
+            return;
+        }
+        $this->_components[$id]->setSelector($idSelector[1]);
+        $this->_components[$id]->init($this->_componentOptions[$id]);
+        if (count($idList) == 0) {
+            $this->_components[$id]->initComponents();
+        } else {
+            $this->_components[$id]->initComponentFromRequest($idList);
+        }
+        $this->_components[$id]->process($this->_componentOptions[$id]);
     }
 
     public function getComponent($id)
     {
         $retV = null;
-        if (!array_key_exists($id, $this->components)) {
+        if (!array_key_exists($id, $this->_components)) {
             return $retV;
         }
-        return $this->components[$id];
+        return $this->_components[$id];
     }
 
     public function getComponentId($id)
     {
-        if (!array_key_exists($id, $this->components)) {
+        if (!array_key_exists($id, $this->_components)) {
             return null;
         }
-        return $this->components[$id]->id;
+        return $this->_components[$id]->id;
     }
 
     public function registerAndInitComponent($classLibrary, $id = null, $options = null)
@@ -195,8 +211,10 @@ class Module
         $payloadArray = "[";
         $comma = "";
         if (!is_null($payload)) {
-            $payloadArray .= json_encode($payload);
-            $comma = ",";
+            foreach ($payload as $key => $value) {
+                $payloadArray .= $comma . "[\"" . addslashes($key) . "\",\"" . addslashes($value) . "\"]";
+                $comma = ",";
+            }
         }
 
         if (!is_null($payloadJs)) {
@@ -210,63 +228,81 @@ class Module
         return $payloadArray;
     }
 
-    public function renderJSRequestPost($payload = null, $payloadJs = null)
+    public function getIdRequest($selector = null)
     {
-        $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.post(\"" . $this->id . "\", \"" . $this->id . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
+        if (!is_null($selector)) {
+            return $this->idRequest . "." . $selector;
+        }
+        if (!is_null($this->_selector)) {
+            return $this->idRequest . "." . $this->_selector;
+        }
+        return $this->idRequest;
     }
 
-    public function renderJSRequestGet($payload = null, $payloadJs = null)
+    public function renderJSRequestGet($payload = null, $payloadJs = null, $selector = null)
     {
+        $idRequest = $this->getIdRequest($selector);
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.get(\"" . $this->id . "\", \"" . $this->id . "\", " . $payloadArray . ");";
+        echo "XYO.Web.Component.AJAX.get(\"" . addslashes($idRequest) . "\", \"" . addslashes($this->id) . "\", " . $payloadArray . ");";
     }
 
-    public function renderJSRequestPostForm($formId, $payload = null, $payloadJs = null)
+    public function renderJSRequestPost($payload = null, $payloadJs = null, $selector = null)
     {
+        $idRequest = $this->getIdRequest($selector);
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.postForm(\"" . $this->id . "\", \"" . $formId . "\", \"" . $this->id . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
+        echo "XYO.Web.Component.AJAX.post(\"" . addslashes($idRequest) . "\", \"" . addslashes($this->id) . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
     }
 
-    public function renderJSRequestPostToElement($id, $payload = null, $payloadJs = null)
+    public function renderJSRequestPostForm($formId, $payload = null, $payloadJs = null, $selector = null)
     {
+        $idRequest = $this->getIdRequest($selector);
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.post(\"" . $this->id . "\", \"" . $id . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
+        echo "XYO.Web.Component.AJAX.postForm(\"" . addslashes($idRequest) . "\", \"" . addslashes($formId) . "\", \"" . addslashes($this->id) . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
     }
 
-    public function renderJSRequestGetToElement($id, $payload = null, $payloadJs = null)
+    public function renderJSRequestGetToElement($id, $payload = null, $payloadJs = null, $selector = null)
     {
+        $idRequest = $this->getIdRequest($selector);
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.get(\"" . $this->id . "\",\"" . $id . "\", " . $payloadArray . ");";
+        echo "XYO.Web.Component.AJAX.get(\"" . addslashes($idRequest) . "\",\"" . addslashes($id) . "\", " . $payloadArray . ");";
     }
 
-    public function renderJSRequestPostFormToElement($formId, $id, $payload = null, $payloadJs = null)
+    public function renderJSRequestPostToElement($id, $payload = null, $payloadJs = null, $selector = null)
     {
+        $idRequest = $this->getIdRequest($selector);
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.postForm(\"" . $this->id . "\",\"" . $formId . "\",\"" . $id . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
+        echo "XYO.Web.Component.AJAX.post(\"" . addslashes($idRequest) . "\", \"" . addslashes($id) . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
+    }
+
+    public function renderJSRequestPostFormToElement($formId, $id, $payload = null, $payloadJs = null, $selector = null)
+    {
+        $idRequest = $this->getIdRequest($selector);
+        $payloadArray = $this->processJSPayload($payload, $payloadJs);
+        echo "XYO.Web.Component.AJAX.postForm(\"" . addslashes($idRequest) . "\",\"" . addslashes($formId) . "\",\"" . addslashes($id) . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
     }
 
     public function renderJSRequestBatchPost($idList, $payload = null, $payloadJs = null)
     {
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.batchPost(\"" . implode(",", $idList) . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
+        echo "XYO.Web.Component.AJAX.batchPost(\"" . addslashes(implode(";", $idList)) . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
     }
 
     public function renderJSRequestBatchGet($idList, $payload = null, $payloadJs = null)
     {
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.batchGet(\"" . implode(",", $idList) . "\", " . $payloadArray . ");";
+        echo "XYO.Web.Component.AJAX.batchGet(\"" . addslashes(implode(";", $idList)) . "\", " . $payloadArray . ");";
     }
 
     public function renderJSRequestBatchPostForm($formId, $idList, $payload = null, $payloadJs = null)
     {
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.batchPostForm(\"" . implode(",", $idList) . "\",\"" . $formId . "\",  " . $payloadArray . ",\"" . $this->view->token . "\");";
+        echo "XYO.Web.Component.AJAX.batchPostForm(\"" . addslashes(implode(";", $idList)) . "\",\"" . $formId . "\",  " . $payloadArray . ",\"" . $this->view->token . "\");";
     }
 
-    public function renderComponentFormRequiredFields()
+    public function renderComponentFormRequiredFields($selector = null)
     {
-        echo "<input type=\"hidden\" name=\"_component\" value=\"" . $this->id . "\"></input>";
+        $idRequest = $this->getIdRequest($selector);
+        echo "<input type=\"hidden\" name=\"_component\" value=\"" . addslashes($idRequest) . "\"></input>";
         echo "<input type=\"hidden\" name=\"_token\" value=\"" . $this->view->token . "\"></input>";
     }
 
@@ -312,17 +348,40 @@ class Module
 
     public function setParent($parent)
     {
-        $this->parent = $parent;
+        $this->_parent = $parent;
     }
 
     public function getParent()
     {
-        return $this->parent;
+        return $this->_parent;
+    }
+
+    public function hasParent()
+    {
+        return (!is_null($this->_parent));
     }
 
     public function getDataSource($className, $connectionName = null)
     {
-        return $this->dsConnection->getDataSource($className, $connectionName);
+        return $this->_dsConnection->getDataSource($className, $connectionName);
+    }
+
+    public function setSelector($selector)
+    {
+        $this->_selector = $selector;
+    }
+
+    public function getSelector($default = null)
+    {
+        if (is_null($this->_selector)) {
+            return $default;
+        }
+        return $this->_selector;
+    }
+
+    public function hasSelector()
+    {
+        return (!is_null($this->_selector));
     }
 
 }

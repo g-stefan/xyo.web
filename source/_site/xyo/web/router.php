@@ -20,7 +20,7 @@ class Router
     protected $config;
 
     protected $view;
-    protected $dsConnection;
+    protected $_dsConnection;
 
     public function __construct($web, $firewall)
     {
@@ -37,7 +37,7 @@ class Router
 
         $this->config = $web->get(\XYO\Web\Config::class);
         $this->view = $web->get(\XYO\Web\View::class);
-        $this->dsConnection = $web->get(\XYO\Web\DataSource\Connection::class);
+        $this->_dsConnection = $web->get(\XYO\Web\DataSource\Connection::class);
     }
 
     public function run()
@@ -58,7 +58,7 @@ class Router
 
             $this->resolve();
 
-            if (!$this->dsConnection->init($this->config)) {
+            if (!$this->_dsConnection->init($this->config)) {
                 $this->renderError("501");
                 return;
             }
@@ -76,7 +76,7 @@ class Router
             $this->render();
         } catch (\Throwable $e) {
             $this->renderError("501");
-            \XYO\Web\Log::logMessage("router", ["datetime" => date("Y-m-d H:i:s"), "message" => $e->getMessage()]);
+            \XYO\Web\Log::logMessage("router", ["datetime" => date("Y-m-d H:i:s"), "message" => $e->getMessage(), "trace" => $e->getTraceAsString()]);
         }
     }
 
@@ -97,12 +97,7 @@ class Router
 
     public function authorize(&$reason)
     {
-        $this->info->authorization = new \XYO\Web\Authorization(
-            $this->info,
-            $this->config,
-            $this->request,
-            $this->dsConnection
-        );
+        $this->info->authorization = new \XYO\Web\Authorization($this->web);
         if ($this->info->routeType != $this->info->routeTypeUnknown) {
             $authorizationFile = $this->findAuthorization($this->info->path);
             if (!empty($authorizationFile)) {
@@ -115,12 +110,7 @@ class Router
                     $reason = "501";
                     return false;
                 }
-                $this->info->authorization = new $authorizationClass(
-                    $this->info,
-                    $this->config,
-                    $this->request,
-                    $this->dsConnection
-                );
+                $this->info->authorization = new $authorizationClass($this->web);
             }
         }
 
@@ -157,51 +147,93 @@ class Router
     {
         if (!class_exists($className, false)) {
             $this->renderError("501");
+            \XYO\Web\Log::logMessage(
+                "router",
+                [
+                    "datetime" => date("Y-m-d H:i:s"),
+                    "message" => "module-class-not-found",
+                    "class" => $className
+                ]
+            );
             return false;
         }
         if (!is_subclass_of($className, \XYO\Web\Module::class)) {
             $this->renderError("501");
+            \XYO\Web\Log::logMessage(
+                "router",
+                [
+                    "datetime" => date("Y-m-d H:i:s"),
+                    "message" => "module-class-not-subclass-of-module",
+                    "class" => $className
+                ]
+            );
             return false;
         }
         return true;
     }
 
+    public function getIdListFromIdRequest($idRequest)
+    {
+        $idRequestList = explode("/", $idRequest);
+        $idList = [];
+        $idRender = [];
+        foreach ($idRequestList as $idInfo) {
+            $idSelector = explode(".", $idInfo);
+            $value = [$idSelector[0], null];
+            if (count($idSelector) > 1) {
+                $value[1] = $idSelector[1];
+            }
+            $idList[] = $value;
+            $idRender[] = $value[0];
+        }
+        return [implode(".", $idRender), $idList];
+    }
+
     public function renderPage($page, $path)
     {
         $this->info->path = $path;
+        define("XYO_WEB_ROUTER_PATH", $this->info->path);
 
         if ($this->request->isAJAX() || $this->request->isJSON()) {
             $component = $this->request->get("_component", "");
             if (strlen($component) > 0) {
+                $componentSelector = $this->getIdListFromIdRequest($component);
+                $this->info->component = $componentSelector[0];
                 $pageClass = require($page);
                 if (!$this->isModuleClass($pageClass)) {
                     return;
                 }
                 $this->info->page = new $pageClass($this->web);
                 $this->info->page->init();
-                $this->info->page->initComponent($component);
+                $id = $this->info->page->initComponentFromRequest($componentSelector[1]);
                 $this->info->page->process();
                 session_write_close();
-                $this->info->page->renderComponent($component);
+                $this->info->page->renderComponent($componentSelector[0]);
                 return;
             }
             $componentList = $this->request->get("_batch", "");
             if (strlen($componentList) > 0) {
-                $idList = array_filter(array_map("trim", explode(",", $componentList)));
+                $idList = array_filter(array_map("trim", explode(";", $componentList)));
                 $pageClass = require($page);
                 if (!$this->isModuleClass($pageClass)) {
                     return;
                 }
                 $this->info->page = new $pageClass($this->web);
                 $this->info->page->init();
+                $idSelector = [];
                 foreach ($idList as $id) {
-                    $this->info->page->initComponent($id);
+                    $idSelector[$id] = $this->getIdListFromIdRequest($id);
+                }
+                foreach ($idList as $id) {
+                    $this->info->component = $idSelector[$id][0];
+                    $this->info->page->initComponentFromRequest($idSelector[$id][1]);
                 }
                 $this->info->page->process();
                 session_write_close();
                 $out = [];
                 foreach ($idList as $id) {
-                    $out[] = [$id, $this->info->page->strRenderComponent($id)];
+                    $this->info->component = $idSelector[$id][0];
+                    $out[] = [$id, $this->info->page->strRenderComponent($idSelector[$id][0])];
                 }
                 header("Content-Type: application/json");
                 echo json_encode($out);
@@ -237,6 +269,7 @@ class Router
     public function renderAPI($apiFile, $path)
     {
         $this->info->path = $path;
+        define("XYO_WEB_ROUTER_PATH", $this->info->path);
 
         $apiClass = require($apiFile);
         if (!$this->isModuleClass($apiClass)) {
@@ -257,6 +290,7 @@ class Router
     public function renderService($serviceFile, $path)
     {
         $this->info->path = $path;
+        define("XYO_WEB_ROUTER_PATH", $this->info->path);
 
         $serviceClass = require($serviceFile);
         if (!$this->isModuleClass($serviceClass)) {

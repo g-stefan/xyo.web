@@ -10,15 +10,15 @@ defined("XYO_WEB") or die("Forbidden");
 
 class ComponentForm extends Component
 {
-    protected $elementsId;
-    protected $elementsAlert;
-    protected $elementsError;
+    protected $_elementsId;
+    protected $_elementsAlert;
+    protected $_elementsError;
 
     public function init($options = null)
     {
-        $this->elementsId = [];
-        $this->elementsAlert = [];
-        $this->elementsError = [];
+        $this->_elementsId = [];
+        $this->_elementsAlert = [];
+        $this->_elementsError = [];
     }
 
     public function getFormId()
@@ -70,11 +70,11 @@ class ComponentForm extends Component
 
     public function getElementId($name)
     {
-        if (!array_key_exists($name, $this->elementsId)) {
-            $index = count($this->elementsId) + 1;
-            $this->elementsId[$name] = $this->id . "_" . $index;
+        if (!array_key_exists($name, $this->_elementsId)) {
+            $index = count($this->_elementsId) + 1;
+            $this->_elementsId[$name] = $this->id . "_" . $index;
         }
-        return $this->elementsId[$name];
+        return $this->_elementsId[$name];
     }
 
     public function getElementValue($name, $default = null)
@@ -114,63 +114,63 @@ class ComponentForm extends Component
 
     public function elementHasAlert($name)
     {
-        if (array_key_exists($name, $this->elementsAlert)) {
-            return (!is_null($this->elementsAlert[$name]));
+        if (array_key_exists($name, $this->_elementsAlert)) {
+            return (!is_null($this->_elementsAlert[$name]));
         }
         return false;
     }
 
     public function getElementAlert($name)
     {
-        if (array_key_exists($name, $this->elementsAlert)) {
-            return $this->elementsAlert[$name];
+        if (array_key_exists($name, $this->_elementsAlert)) {
+            return $this->_elementsAlert[$name];
         }
         return null;
     }
 
     public function setElementAlert($name, $value)
     {
-        $this->elementsAlert[$name] = $value;
+        $this->_elementsAlert[$name] = $value;
     }
 
     public function clearElementAlert($name)
     {
-        if (array_key_exists($name, $this->elementsAlert)) {
-            $this->elementsAlert[$name] = null;
+        if (array_key_exists($name, $this->_elementsAlert)) {
+            $this->_elementsAlert[$name] = null;
         }
     }
 
     public function elementHasError($name)
     {
-        if (array_key_exists($name, $this->elementsError)) {
-            return (!is_null($this->elementsError[$name]));
+        if (array_key_exists($name, $this->_elementsError)) {
+            return (!is_null($this->_elementsError[$name]));
         }
         return false;
     }
 
     public function getElementError($name)
     {
-        if (array_key_exists($name, $this->elementsError)) {
-            return $this->elementsError[$name];
+        if (array_key_exists($name, $this->_elementsError)) {
+            return $this->_elementsError[$name];
         }
         return null;
     }
 
     public function setElementError($name, $value)
     {
-        $this->elementsError[$name] = $value;
+        $this->_elementsError[$name] = $value;
     }
 
     public function clearElementError($name)
     {
-        if (array_key_exists($name, $this->elementsError)) {
-            $this->elementsError[$name] = null;
+        if (array_key_exists($name, $this->_elementsError)) {
+            $this->_elementsError[$name] = null;
         }
     }
 
     public function hasAlert()
     {
-        foreach ($this->elementsAlert as $value) {
+        foreach ($this->_elementsAlert as $value) {
             if (!is_null($value)) {
                 return true;
             }
@@ -180,12 +180,12 @@ class ComponentForm extends Component
 
     public function clearAlert()
     {
-        $this->elementsAlert = [];
+        $this->_elementsAlert = [];
     }
 
     public function hasError()
     {
-        foreach ($this->elementsError as $value) {
+        foreach ($this->_elementsError as $value) {
             if (!is_null($value)) {
                 return true;
             }
@@ -195,7 +195,7 @@ class ComponentForm extends Component
 
     public function clearError()
     {
-        $this->elementsError = [];
+        $this->_elementsError = [];
     }
 
 }

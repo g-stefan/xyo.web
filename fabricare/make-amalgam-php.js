@@ -40,6 +40,7 @@ function processAmalgam(path, phpSourceFiles, file, phpSourceFilesExtra, guard) 
 };
 
 phpSourceFiles = [
+	"autoload.php",
 	"registry.php",
 	"config.php",
 	"info.php",
@@ -52,17 +53,17 @@ phpSourceFiles = [
 	"firewall.php",
 	"client.php",
 	"log.php",
-	"datasource/empty-field.php",
-	"datasource/table-info.php",
-	"datasource/query-info.php",
-	"datasource/order.php",
-	"datasource/datasource-exception.php",
-	"datasource/table.php",
-	"datasource/query.php",	
-	"datasource/connection.php",
-	"datasource/type/abstract-sql-table.php",
-	"datasource/type/abstract-sql-query.php",
-	"datasource/type/abstract-sql-connection.php",		
+	"data-source/empty-field.php",
+	"data-source/table-info.php",
+	"data-source/query-info.php",
+	"data-source/order.php",
+	"data-source/data-source-exception.php",
+	"data-source/table.php",
+	"data-source/query.php",	
+	"data-source/connection.php",
+	"data-source/abstract-sql-table.php",
+	"data-source/abstract-sql-query.php",
+	"data-source/abstract-sql-connection.php",		
 	"router.php",
 	"language.php",
 	"module.php",
@@ -80,59 +81,59 @@ for (file of phpSourceFiles) {
 
 // ---
 phpSourceFilesExtra = [
-	"_site/xyo/web/datasource/table-info.php",
-	"_site/xyo/web/datasource/query-info.php",
-	"_site/xyo/web/datasource/type/abstract-sql-table.php",
-	"_site/xyo/web/datasource/type/abstract-sql-query.php",
-	"_site/xyo/web/datasource/type/abstract-sql-connection.php",
+	"_site/xyo/web/data-source/table-info.php",
+	"_site/xyo/web/data-source/query-info.php",
+	"_site/xyo/web/data-source/abstract-sql-table.php",
+	"_site/xyo/web/data-source/abstract-sql-query.php",
+	"_site/xyo/web/data-source/abstract-sql-connection.php",
 ];
 // ---
 
 phpSourceFiles = [
-	"mysql-table.php",
-	"mysql-query.php",
-	"mysql-connection.php"
+	"my-sql-table.php",
+	"my-sql-query.php",
+	"my-sql-connection.php"
 ];
 
-processAmalgam("_site/xyo/web/datasource/type",
+processAmalgam("_site/xyo/web/data-source",
 	phpSourceFiles,
-	"./output/_site/xyo/web/datasource/type/mysql-connection.php",
+	"./output/_site/xyo/web/data-source/my-sql-connection.php",
 	phpSourceFilesExtra,
 	true);
-Shell.remove("./output/_site/xyo/web/datasource/type/mysql-table.php");
-Shell.remove("./output/_site/xyo/web/datasource/type/mysql-query.php");
+Shell.remove("./output/_site/xyo/web/data-source/my-sql-table.php");
+Shell.remove("./output/_site/xyo/web/data-source/my-sql-query.php");
 
 // ---
 
 phpSourceFiles = [
-	"sqlite-table.php",
-	"sqlite-query.php",
-	"sqlite-connection.php"
+	"sq-lite-table.php",
+	"sq-lite-query.php",
+	"sq-lite-connection.php"
 ];
 
-processAmalgam("_site/xyo/web/datasource/type",
+processAmalgam("_site/xyo/web/data-source",
 	phpSourceFiles,
-	"./output/_site/xyo/web/datasource/type/sqlite-connection.php",
+	"./output/_site/xyo/web/data-source/sq-lite-connection.php",
 	phpSourceFilesExtra,
 	true);
-Shell.remove("./output/_site/xyo/web/datasource/type/sqlite-table.php");
-Shell.remove("./output/_site/xyo/web/datasource/type/sqlite-query.php");
+Shell.remove("./output/_site/xyo/web/data-source/sq-lite-table.php");
+Shell.remove("./output/_site/xyo/web/data-source/sq-lite-query.php");
 
 // ---
 
 phpSourceFiles = [
-	"postgresql-table.php",
-	"postgresql-query.php",
-	"postgresql-connection.php"
+	"postgre-sql-table.php",
+	"postgre-sql-query.php",
+	"postgre-sql-connection.php"
 ];
 
-processAmalgam("_site/xyo/web/datasource/type",
+processAmalgam("_site/xyo/web/data-source",
 	phpSourceFiles,
-	"./output/_site/xyo/web/datasource/type/postgresql-connection.php",
+	"./output/_site/xyo/web/data-source/postgre-sql-connection.php",
 	phpSourceFilesExtra,
 	true);
-Shell.remove("./output/_site/xyo/web/datasource/type/postgresql-table.php");
-Shell.remove("./output/_site/xyo/web/datasource/type/postgresql-query.php");
+Shell.remove("./output/_site/xyo/web/data-source/postgre-sql-table.php");
+Shell.remove("./output/_site/xyo/web/data-source/postgre-sql-query.php");
 
 // ---
 

@@ -30,4 +30,7 @@ class Registry
         return $this->value[$className];
     }
 
+    public function has($className){
+        return array_key_exists($className, $this->value);
+    }
 }

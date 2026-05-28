@@ -4,13 +4,13 @@
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
 // SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web\DataSource\Type\MySQL;
+namespace XYO\Web\DataSource;
 
 defined("XYO_WEB") or die("Forbidden");
 
 // This is part of optimized MySQL Driver
 
-class Table extends \XYO\Web\DataSource\Type\AbstractSQLTable
+class MySQLTable extends \XYO\Web\DataSource\AbstractSQLTable
 {
     protected function quoteIdentifier($name)
     {
@@ -52,7 +52,7 @@ class Table extends \XYO\Web\DataSource\Type\AbstractSQLTable
             }
             if (count($value) > 1) {
                 if (!is_null($value[1])) {
-                    $def .= " DEFAULT '" . addcslashes($value[1], "'") . "'";
+                    $def .= " DEFAULT '" . addcslashes($value[1], "'\\") . "'";
                 }
             }
             return $def;
@@ -76,7 +76,7 @@ class Table extends \XYO\Web\DataSource\Type\AbstractSQLTable
                 if (is_int($value[1])) {
                     $def .= " DEFAULT " . $value[1];
                 } else {
-                    $def .= " DEFAULT '" . addcslashes($value[1], "'") . "'";
+                    $def .= " DEFAULT '" . addcslashes($value[1], "'\\") . "'";
                 }
             }
         }

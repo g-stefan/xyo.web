@@ -4,13 +4,13 @@
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
 // SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web\DataSource\Type\PostgreSQL;
+namespace XYO\Web\DataSource;
 
 defined("XYO_WEB") or die("Forbidden");
 
 // This is part of optimized PostgreSQL Driver
 
-class Table extends \XYO\Web\DataSource\Type\AbstractSQLTable
+class PostgreSQLTable extends \XYO\Web\DataSource\AbstractSQLTable
 {
     protected function quoteIdentifier($name)
     {

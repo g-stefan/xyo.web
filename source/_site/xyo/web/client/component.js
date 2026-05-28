@@ -36,7 +36,7 @@ XYO.Web.Component.AJAX.get = function (componentId, elementId, payloadArray, fnE
     };
     payloadArray.push(["_component", componentId]);
     payloadArray.push(["_ajax", 1]);
-    payloadArray.push(["_tab", this.tabId]);
+    payloadArray.push(["_tab", XYO.Web.Component.tabId]);
     var i;
     for (i = 0; i < payloadArray.length; ++i) {
         payload += encodeURIComponent(payloadArray[i][0]) + "=" + encodeURIComponent(payloadArray[i][1]) + "&";
@@ -66,7 +66,7 @@ XYO.Web.Component.AJAX.post = function (componentId, elementId, payloadArray, to
     payloadArray.push(["_component", componentId]);
     payloadArray.push(["_ajax", 1]);
     payloadArray.push(["_token", token]);
-    payloadArray.push(["_tab", this.tabId]);
+    payloadArray.push(["_tab", XYO.Web.Component.tabId]);
 
     var i;
     for (i = 0; i < payloadArray.length; ++i) {
@@ -107,7 +107,7 @@ XYO.Web.Component.AJAX.postForm = function (componentId, formId, elementId, payl
     payloadArray.push(["_component", componentId]);
     payloadArray.push(["_ajax", 1]);
     payloadArray.push(["_token", token]);
-    payloadArray.push(["_tab", this.tabId]);
+    payloadArray.push(["_tab", XYO.Web.Component.tabId]);
 
     var i;
     for (i = 0; i < payloadArray.length; ++i) {
@@ -136,7 +136,7 @@ XYO.Web.Component.AJAX.batchGet = function (componentIdList, payloadArray, fnErr
     };
     payloadArray.push(["_batch", componentIdList]);
     payloadArray.push(["_ajax", 1]);
-    payloadArray.push(["_tab", this.tabId]);
+    payloadArray.push(["_tab", XYO.Web.Component.tabId]);
 
     var i;
     for (i = 0; i < payloadArray.length; ++i) {
@@ -173,7 +173,7 @@ XYO.Web.Component.AJAX.batchPost = function (componentIdList, payloadArray, toke
     payloadArray.push(["_batch", componentIdList]);
     payloadArray.push(["_ajax", 1]);
     payloadArray.push(["_token", token]);
-    payloadArray.push(["_tab", this.tabId]);
+    payloadArray.push(["_tab", XYO.Web.Component.tabId]);
 
     var i;
     for (i = 0; i < payloadArray.length; ++i) {
@@ -220,7 +220,7 @@ XYO.Web.Component.AJAX.batchPostForm = function (componentIdList, formId, payloa
     payloadArray.push(["_batch", componentIdList]);
     payloadArray.push(["_ajax", 1]);
     payloadArray.push(["_token", token]);
-    payloadArray.push(["_tab", this.tabId]);
+    payloadArray.push(["_tab", XYO.Web.Component.tabId]);
 
     var i;
     for (i = 0; i < payloadArray.length; ++i) {

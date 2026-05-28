@@ -4,13 +4,13 @@
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
 // SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web\DataSource\Type\PostgreSQL;
+namespace XYO\Web\DataSource;
 
 defined("XYO_WEB") or die("Forbidden");
 
 // This is part of optimized PostgreSQL Driver
 
-class Connection extends \XYO\Web\DataSource\Type\AbstractSQLConnection
+class PostgreSQLConnection extends \XYO\Web\DataSource\AbstractSQLConnection
 {
     protected $user;
     protected $password;
@@ -60,11 +60,11 @@ class Connection extends \XYO\Web\DataSource\Type\AbstractSQLConnection
 
     protected function newTable($connector)
     {
-        return new Table($this, $connector);
+        return new PostgreSQLTable($this, $connector);
     }
 
     protected function newQuery($connector)
     {
-        return new Query($this, $connector);
+        return new PostgreSQLQuery($this, $connector);
     }
 }

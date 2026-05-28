@@ -21,7 +21,7 @@ class Connection
         if ($config->has("dataSource")) {
             $connection = $config->get("dataSource")->getArray("connection");
             foreach ($connection as $name => $info) {
-                if(!$this->set($name, $info)){
+                if (!$this->set($name, $info)) {
                     return false;
                 }
             }
@@ -36,21 +36,21 @@ class Connection
         }
         $type = $configuration["type"];
         $typeClass = null;
-        if($type==="sqlite") {
-            require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/sqlite-connection.php");
-            $typeClass = \XYO\Web\DataSource\Type\SQLite\Connection::class;
+        if ($type === "sqlite") {
+            require_once(XYO_WEB_PATH . "_site/xyo/web/data-source/sq-lite-connection.php");
+            $typeClass = \XYO\Web\DataSource\SQLiteConnection::class;
         }
-        if($type==="mysql") {
-            require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/mysql-connection.php");
-            $typeClass = \XYO\Web\DataSource\Type\MySQL\Connection::class;
+        if ($type === "mysql") {
+            require_once(XYO_WEB_PATH . "_site/xyo/web/data-source/my-sql-connection.php");
+            $typeClass = \XYO\Web\DataSource\MySQLConnection::class;
         }
-        if($type==="postgresql") {
-            require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/postgresql-connection.php");
-            $typeClass = \XYO\Web\DataSource\Type\PostgreSQL\Connection::class;
+        if ($type === "postgresql") {
+            require_once(XYO_WEB_PATH . "_site/xyo/web/data-source/postgre-sql-connection.php");
+            $typeClass = \XYO\Web\DataSource\PostgreSQLConnection::class;
         }
-        if(is_null($typeClass)) {
+        if (is_null($typeClass)) {
             return false;
-        }        
+        }
         $this->connection[$name] = new $typeClass($configuration);
         return true;
     }
@@ -68,7 +68,7 @@ class Connection
         if (!array_key_exists($name, $this->connection)) {
             return null;
         }
-        if(!$this->connection[$name]->open()){
+        if (!$this->connection[$name]->open()) {
             return null;
         }
         return $this->connection[$name];

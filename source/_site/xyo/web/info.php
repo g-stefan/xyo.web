@@ -29,6 +29,7 @@ class Info
     public $layout;
     public $page;
     public $api;
+    public $component;
 
     public function __construct()
     {
@@ -49,6 +50,8 @@ class Info
         $this->layout = null;
         $this->page = null;
         $this->api = null;
+
+        $this->component = null;
     }
 
 }

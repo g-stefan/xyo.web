@@ -3,20 +3,20 @@
 // SPDX-FileCopyrightText: 2024-2026 Grigore Stefan <g_stefan@yahoo.com>
 // SPDX-License-Identifier: Apache-2.0
 
-namespace XYO\Web\_Default;
+namespace XYO\Web\Default;
 
 defined("XYO_WEB") or die("Forbidden");
 
 require_once(XYO_WEB_PATH . "_site/xyo/web/library/xyo-web-logo.php");
 use XYO\Web\Library\XYOWebLogo;
 
-class HTTP404 extends \XYO\Web\Page
+class HTTP401 extends \XYO\Web\Page
 {
     public function init($options = null)
     {
-        http_response_code(404);
+        http_response_code(401);
 
-        $this->setTitle("404 Not Found");
+        $this->setTitle("401 Unauthorized");
 
         XYOWebLogo::register($this, "logo");
     }
@@ -30,11 +30,12 @@ class HTTP404 extends \XYO\Web\Page
                         <?php $this->renderComponent("logo"); ?>
                         <div class="min-w-96 divide-y divide-gray-300/50">
                             <div class="space-y-6 py-8 text-center text-base leading-7 text-gray-600">
-                                <p class="text-9xl">404</p>
-                                <p class="text-2xl">Not Found</p>
+                                <p class="text-9xl">401</p>
+                                <p class="text-2xl">Unauthorized</p>
                             </div>
                             <div class="pt-8 text-center text-base font-semibold leading-7">
-                                <p class="text-gray-900">The requested URL was not found on this server.</p>
+                                <p class="text-gray-900">The request has invalid authentication credentials for the requested
+                                    resource</p>
                             </div>
                         </div>
                     </div>
@@ -43,4 +44,4 @@ class HTTP404 extends \XYO\Web\Page
         <?php }
     }
 
-return HTTP404::class;
+return HTTP401::class;

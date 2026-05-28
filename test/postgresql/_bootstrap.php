@@ -27,9 +27,7 @@ if (!defined("XYO_WEB_PATH")) {
     define("XYO_WEB_PATH", str_replace("\\", "/", $root) . "/");
 }
 
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/table.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/query.php");
-require_once(XYO_WEB_PATH . "_site/xyo/web/datasource/type/postgresql-connection.php");
+require_once(XYO_WEB_PATH . "_site/xyo/web/autoload.php");
 
 require_once(__DIR__ . "/../_lib/harness.php");
 require_once(__DIR__ . "/../_lib/descriptors.php");
@@ -43,7 +41,7 @@ function mock_connection()
         return ($v === false || $v === "") ? $default : $v;
     };
 
-    $connection = new \XYO\Web\DataSource\Type\PostgreSQL\Connection([
+    $connection = new \XYO\Web\DataSource\PostgreSQLConnection([
         "type"     => "postgresql",
         "server"   => $env("XYO_PGSQL_SERVER", "localhost"),
         "port"     => $env("XYO_PGSQL_PORT", "5432"),
