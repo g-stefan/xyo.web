@@ -441,6 +441,10 @@ class Router
 
     public function renderRedirect()
     {
+        if (!preg_match("#^/(?!/)#", $this->info->location)) {
+            $this->renderError("400");
+            return;
+        }
         if ($this->request->isJSON() || $this->request->isAPI() || $this->request->isAJAX()) {
             http_response_code(301);
             header("Location: " . $this->info->location);
@@ -469,7 +473,7 @@ class Router
         $pathSearchList = [];
         $pathSearchList[] = "./";
         $pathSearchList[] = "./_site/xyo/web/default/";
-        $page = $this->findItem($pathSearchList, "http-".$error . ".php");
+        $page = $this->findItem($pathSearchList, "http-" . $error . ".php");
         if (is_null($page)) {
             return;
         }

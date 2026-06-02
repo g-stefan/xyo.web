@@ -209,14 +209,14 @@ class Module
         $comma = "";
         if (!is_null($payload)) {
             foreach ($payload as $key => $value) {
-                $payloadArray .= $comma . "[\"" . addslashes($key) . "\",\"" . addslashes($value) . "\"]";
+                $payloadArray .= $comma . "[" . json_encode($key) . "," . json_encode($value) . "]";
                 $comma = ",";
             }
         }
 
         if (!is_null($payloadJs)) {
             foreach ($payloadJs as $key => $value) {
-                $payloadArray .= $comma . "[\"" . addslashes($key) . "\"," . $value . "]";
+                $payloadArray .= $comma . "[" . json_encode($key) . "," . $value . "]";
                 $comma = ",";
             }
         }
@@ -240,66 +240,66 @@ class Module
     {
         $idRequest = $this->getIdRequest($selector);
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.get(\"" . addslashes($idRequest) . "\", \"" . addslashes($this->id) . "\", " . $payloadArray . ");";
+        echo "XYO.Web.Component.AJAX.get(" . json_encode($idRequest) . ", " . json_encode($this->id) . ", " . $payloadArray . ");";
     }
 
     public function renderJSRequestPost($payload = null, $payloadJs = null, $selector = null)
     {
         $idRequest = $this->getIdRequest($selector);
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.post(\"" . addslashes($idRequest) . "\", \"" . addslashes($this->id) . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
+        echo "XYO.Web.Component.AJAX.post(" . json_encode($idRequest) . ", " . json_encode($this->id) . ", " . $payloadArray . ",\"" . $this->view->token . "\");";
     }
 
     public function renderJSRequestPostForm($formId, $payload = null, $payloadJs = null, $selector = null)
     {
         $idRequest = $this->getIdRequest($selector);
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.postForm(\"" . addslashes($idRequest) . "\", \"" . addslashes($formId) . "\", \"" . addslashes($this->id) . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
+        echo "XYO.Web.Component.AJAX.postForm(" . json_encode($idRequest) . ", " . json_encode($formId) . ", " . json_encode($this->id) . ", " . $payloadArray . ",\"" . $this->view->token . "\");";
     }
 
     public function renderJSRequestGetToElement($id, $payload = null, $payloadJs = null, $selector = null)
     {
         $idRequest = $this->getIdRequest($selector);
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.get(\"" . addslashes($idRequest) . "\",\"" . addslashes($id) . "\", " . $payloadArray . ");";
+        echo "XYO.Web.Component.AJAX.get(" . json_encode($idRequest) . "," . json_encode($id) . ", " . $payloadArray . ");";
     }
 
     public function renderJSRequestPostToElement($id, $payload = null, $payloadJs = null, $selector = null)
     {
         $idRequest = $this->getIdRequest($selector);
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.post(\"" . addslashes($idRequest) . "\", \"" . addslashes($id) . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
+        echo "XYO.Web.Component.AJAX.post(" . json_encode($idRequest) . ", " . json_encode($id) . ", " . $payloadArray . ",\"" . $this->view->token . "\");";
     }
 
     public function renderJSRequestPostFormToElement($formId, $id, $payload = null, $payloadJs = null, $selector = null)
     {
         $idRequest = $this->getIdRequest($selector);
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.postForm(\"" . addslashes($idRequest) . "\",\"" . addslashes($formId) . "\",\"" . addslashes($id) . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
+        echo "XYO.Web.Component.AJAX.postForm(" . json_encode($idRequest) . "," . json_encode($formId) . "," . json_encode($id) . ", " . $payloadArray . ",\"" . $this->view->token . "\");";
     }
 
     public function renderJSRequestBatchPost($idList, $payload = null, $payloadJs = null)
     {
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.batchPost(\"" . addslashes(implode(";", $idList)) . "\", " . $payloadArray . ",\"" . $this->view->token . "\");";
+        echo "XYO.Web.Component.AJAX.batchPost(" . json_encode(implode(";", $idList)) . ", " . $payloadArray . ",\"" . $this->view->token . "\");";
     }
 
     public function renderJSRequestBatchGet($idList, $payload = null, $payloadJs = null)
     {
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.batchGet(\"" . addslashes(implode(";", $idList)) . "\", " . $payloadArray . ");";
+        echo "XYO.Web.Component.AJAX.batchGet(" . json_encode(implode(";", $idList)) . ", " . $payloadArray . ");";
     }
 
     public function renderJSRequestBatchPostForm($formId, $idList, $payload = null, $payloadJs = null)
     {
         $payloadArray = $this->processJSPayload($payload, $payloadJs);
-        echo "XYO.Web.Component.AJAX.batchPostForm(\"" . addslashes(implode(";", $idList)) . "\",\"" . $formId . "\",  " . $payloadArray . ",\"" . $this->view->token . "\");";
+        echo "XYO.Web.Component.AJAX.batchPostForm(" . json_encode(implode(";", $idList)) . "," . json_encode($formId) . ",  " . $payloadArray . ",\"" . $this->view->token . "\");";
     }
 
     public function renderComponentFormRequiredFields($selector = null)
     {
         $idRequest = $this->getIdRequest($selector);
-        echo "<input type=\"hidden\" name=\"_component\" value=\"" . addslashes($idRequest) . "\"></input>";
+        echo "<input type=\"hidden\" name=\"_component\" value=\"" . htmlspecialchars($idRequest, ENT_QUOTES) . "\"></input>";
         echo "<input type=\"hidden\" name=\"_token\" value=\"" . $this->view->token . "\"></input>";
     }
 
